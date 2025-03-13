@@ -394,6 +394,9 @@ func (obj FundManagerAddNormalizedTokenPoolSupportedToken) MarshalWithEncoder(en
 		case *TokenPricingSourceOrcaDEXLiquidityPoolTuple:
 			tmp.Enum = 5
 			tmp.OrcaDEXLiquidityPool = *realvalue
+		case *TokenPricingSourceSanctumSingleValidatorSPLStakePoolTuple:
+			tmp.Enum = 6
+			tmp.SanctumSingleValidatorSPLStakePool = *realvalue
 		}
 		err := encoder.Encode(tmp)
 		if err != nil {
@@ -423,6 +426,8 @@ func (obj *FundManagerAddNormalizedTokenPoolSupportedToken) UnmarshalWithDecoder
 			obj.PricingSource = &tmp.FragmetricRestakingFund
 		case 5:
 			obj.PricingSource = &tmp.OrcaDEXLiquidityPool
+		case 6:
+			obj.PricingSource = &tmp.SanctumSingleValidatorSPLStakePool
 		default:
 			return fmt.Errorf("unknown enum index: %v", tmp.Enum)
 		}

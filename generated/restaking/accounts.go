@@ -9,12 +9,17 @@ import (
 )
 
 type FundAccountAccount struct {
-	DataVersion         uint16
-	Bump                uint8
-	ReserveAccountBump  uint8
-	TreasuryAccountBump uint8
-	Padding             [10]uint8
-	TransferEnabled     uint8
+	DataVersion               uint16
+	Bump                      uint8
+	ReserveAccountBump        uint8
+	TreasuryAccountBump       uint8
+	WrapAccountBump           uint8
+	Padding                   [8]uint8
+	TransferEnabled           uint8
+	AddressLookupTableEnabled uint8
+	AddressLookupTableAccount ag_solanago.PublicKey
+	ReserveAccount            ag_solanago.PublicKey
+	TreasuryAccount           ag_solanago.PublicKey
 
 	// receipt token information
 	ReceiptTokenMint             ag_solanago.PublicKey
@@ -31,7 +36,8 @@ type FundAccountAccount struct {
 	WithdrawalFeeRateBps                    uint16
 	WithdrawalEnabled                       uint8
 	DepositEnabled                          uint8
-	Padding4                                [4]uint8
+	DonationEnabled                         uint8
+	Padding4                                [3]uint8
 
 	// SOL deposit & withdrawal
 	Sol AssetState
@@ -51,6 +57,10 @@ type FundAccountAccount struct {
 
 	// fund operation state
 	Operation OperationState
+
+	// optional wrapped token of fund receipt token
+	WrapAccount  ag_solanago.PublicKey
+	WrappedToken WrappedToken
 }
 
 var FundAccountAccountDiscriminator = [8]byte{49, 104, 168, 214, 134, 180, 173, 154}
@@ -81,6 +91,11 @@ func (obj FundAccountAccount) MarshalWithEncoder(encoder *ag_binary.Encoder) (er
 	if err != nil {
 		return err
 	}
+	// Serialize `WrapAccountBump` param:
+	err = encoder.Encode(obj.WrapAccountBump)
+	if err != nil {
+		return err
+	}
 	// Serialize `Padding` param:
 	err = encoder.Encode(obj.Padding)
 	if err != nil {
@@ -88,6 +103,26 @@ func (obj FundAccountAccount) MarshalWithEncoder(encoder *ag_binary.Encoder) (er
 	}
 	// Serialize `TransferEnabled` param:
 	err = encoder.Encode(obj.TransferEnabled)
+	if err != nil {
+		return err
+	}
+	// Serialize `AddressLookupTableEnabled` param:
+	err = encoder.Encode(obj.AddressLookupTableEnabled)
+	if err != nil {
+		return err
+	}
+	// Serialize `AddressLookupTableAccount` param:
+	err = encoder.Encode(obj.AddressLookupTableAccount)
+	if err != nil {
+		return err
+	}
+	// Serialize `ReserveAccount` param:
+	err = encoder.Encode(obj.ReserveAccount)
+	if err != nil {
+		return err
+	}
+	// Serialize `TreasuryAccount` param:
+	err = encoder.Encode(obj.TreasuryAccount)
 	if err != nil {
 		return err
 	}
@@ -151,6 +186,11 @@ func (obj FundAccountAccount) MarshalWithEncoder(encoder *ag_binary.Encoder) (er
 	if err != nil {
 		return err
 	}
+	// Serialize `DonationEnabled` param:
+	err = encoder.Encode(obj.DonationEnabled)
+	if err != nil {
+		return err
+	}
 	// Serialize `Padding4` param:
 	err = encoder.Encode(obj.Padding4)
 	if err != nil {
@@ -201,6 +241,16 @@ func (obj FundAccountAccount) MarshalWithEncoder(encoder *ag_binary.Encoder) (er
 	if err != nil {
 		return err
 	}
+	// Serialize `WrapAccount` param:
+	err = encoder.Encode(obj.WrapAccount)
+	if err != nil {
+		return err
+	}
+	// Serialize `WrappedToken` param:
+	err = encoder.Encode(obj.WrappedToken)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -238,6 +288,11 @@ func (obj *FundAccountAccount) UnmarshalWithDecoder(decoder *ag_binary.Decoder) 
 	if err != nil {
 		return err
 	}
+	// Deserialize `WrapAccountBump`:
+	err = decoder.Decode(&obj.WrapAccountBump)
+	if err != nil {
+		return err
+	}
 	// Deserialize `Padding`:
 	err = decoder.Decode(&obj.Padding)
 	if err != nil {
@@ -245,6 +300,26 @@ func (obj *FundAccountAccount) UnmarshalWithDecoder(decoder *ag_binary.Decoder) 
 	}
 	// Deserialize `TransferEnabled`:
 	err = decoder.Decode(&obj.TransferEnabled)
+	if err != nil {
+		return err
+	}
+	// Deserialize `AddressLookupTableEnabled`:
+	err = decoder.Decode(&obj.AddressLookupTableEnabled)
+	if err != nil {
+		return err
+	}
+	// Deserialize `AddressLookupTableAccount`:
+	err = decoder.Decode(&obj.AddressLookupTableAccount)
+	if err != nil {
+		return err
+	}
+	// Deserialize `ReserveAccount`:
+	err = decoder.Decode(&obj.ReserveAccount)
+	if err != nil {
+		return err
+	}
+	// Deserialize `TreasuryAccount`:
+	err = decoder.Decode(&obj.TreasuryAccount)
 	if err != nil {
 		return err
 	}
@@ -308,6 +383,11 @@ func (obj *FundAccountAccount) UnmarshalWithDecoder(decoder *ag_binary.Decoder) 
 	if err != nil {
 		return err
 	}
+	// Deserialize `DonationEnabled`:
+	err = decoder.Decode(&obj.DonationEnabled)
+	if err != nil {
+		return err
+	}
 	// Deserialize `Padding4`:
 	err = decoder.Decode(&obj.Padding4)
 	if err != nil {
@@ -355,6 +435,16 @@ func (obj *FundAccountAccount) UnmarshalWithDecoder(decoder *ag_binary.Decoder) 
 	}
 	// Deserialize `Operation`:
 	err = decoder.Decode(&obj.Operation)
+	if err != nil {
+		return err
+	}
+	// Deserialize `WrapAccount`:
+	err = decoder.Decode(&obj.WrapAccount)
+	if err != nil {
+		return err
+	}
+	// Deserialize `WrappedToken`:
+	err = decoder.Decode(&obj.WrappedToken)
 	if err != nil {
 		return err
 	}
