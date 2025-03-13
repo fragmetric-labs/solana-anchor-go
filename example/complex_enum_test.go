@@ -2,6 +2,7 @@ package example
 
 import (
 	"bytes"
+	"encoding/hex"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/fragmetric-labs/solana-anchor-go/generated/restaking"
 	ag_binary "github.com/gagliardetto/binary"
@@ -56,4 +57,21 @@ func TestComplexEnum(t *testing.T) {
 	}
 	require.Equal(t, printer.Sdump(src), printer.Sdump(dst), "3")
 	printer.Dump(src)
+}
+
+func TestComplexEnum_DecodeRawEvent(t *testing.T) {
+	eventData, err := hex.DecodeString("e445a52e51cb9a1d0a001dcc807de395d634089bb695733914837de852fbd24cff284e2722a63480697643ca75f76c92349707ef78937aa1fdee335943b8d8e3eabc7a07f9384299867f65d1a69d98080000f0050000000000000702000100e1f5050000000000010700e1f5050000000000000000000000000000e13c0600000000000000000000000000000000000000000000000000000000000000001400")
+	require.NoError(t, err, "failed to decode bytes")
+	buf := bytes.NewBuffer(eventData[8:])
+
+	dst := restaking.OperatorRanFundCommandEventData{}
+	require.NoError(t, ag_binary.NewBorshDecoder(buf.Bytes()).Decode(&dst), "2")
+
+	printer := spew.ConfigState{
+		Indent:                  " ",
+		DisablePointerAddresses: true,
+		DisableCapacities:       true,
+	}
+	printer.Dump(dst)
+	require.NotEmpty(t, dst.Result, "result is empty .. see: https://explorer.solana.com/tx/48CL5KorgSLNmSSpS2SgZaNPsjKNkC9qoax9bTBPcZ3td57eDdiwDvQ2m1UPzxG6JcjNBqmUMJ8mEqE5eyqmDg7P?cluster=devnet")
 }
