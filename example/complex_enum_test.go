@@ -30,7 +30,7 @@ func TestComplexEnum(t *testing.T) {
 		FundAccount:      ag_solanago.MustPublicKeyFromBase58("HdZM8mzEH7JAcswjJNgCC8Zmbu97LCzYo4WCSvFkfWKx"),
 		NextSequence:     123,
 		NumOperated:      456,
-		Command: restaking.OperationCommandProcessWithdrawalBatchTuple{
+		Command: &restaking.OperationCommandProcessWithdrawalBatchTuple{
 			Elem0: restaking.ProcessWithdrawalBatchCommand{
 				State: &restaking.ProcessWithdrawalBatchCommandStateExecuteTuple{
 					AssetTokenMint:       nil,
