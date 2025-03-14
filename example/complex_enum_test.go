@@ -11,20 +11,11 @@ import (
 	"testing"
 )
 
+func toPtr[T any](x T) *T {
+	return &x
+}
+
 func TestComplexEnum(t *testing.T) {
-	var res restaking.OperationCommandResult = &restaking.OperationCommandResultProcessWithdrawalBatchTuple{
-		Elem0: restaking.ProcessWithdrawalBatchCommandResult{
-			RequestedReceiptTokenAmount:   1,
-			ProcessedReceiptTokenAmount:   2,
-			AssetTokenMint:                nil,
-			RequiredAssetAmount:           3,
-			ReservedAssetUserAmount:       4,
-			DeductedAssetFeeAmount:        5,
-			OffsettedAssetReceivables:     nil,
-			TransferredAssetRevenueAmount: 6,
-			WithdrawalFeeRateBps:          7,
-		},
-	}
 	src := restaking.OperatorRanFundCommand{
 		ReceiptTokenMint: ag_solanago.MustPublicKeyFromBase58("GPKjBDTNexAsis6zqGnioAzhauvHzs6UzGXKxx37HdkA"),
 		FundAccount:      ag_solanago.MustPublicKeyFromBase58("HdZM8mzEH7JAcswjJNgCC8Zmbu97LCzYo4WCSvFkfWKx"),
@@ -40,7 +31,19 @@ func TestComplexEnum(t *testing.T) {
 				Forced: true,
 			},
 		},
-		Result: &res,
+		Result: toPtr[restaking.OperationCommandResult](&restaking.OperationCommandResultProcessWithdrawalBatchTuple{
+			Elem0: restaking.ProcessWithdrawalBatchCommandResult{
+				RequestedReceiptTokenAmount:   1,
+				ProcessedReceiptTokenAmount:   2,
+				AssetTokenMint:                nil,
+				RequiredAssetAmount:           3,
+				ReservedAssetUserAmount:       4,
+				DeductedAssetFeeAmount:        5,
+				OffsettedAssetReceivables:     nil,
+				TransferredAssetRevenueAmount: 6,
+				WithdrawalFeeRateBps:          7,
+			},
+		}),
 	}
 
 	// encoding
@@ -48,6 +51,39 @@ func TestComplexEnum(t *testing.T) {
 	require.NoError(t, ag_binary.NewBorshEncoder(buf).Encode(src), "1")
 
 	dst := restaking.OperatorRanFundCommand{}
+	require.NoError(t, ag_binary.NewBorshDecoder(buf.Bytes()).Decode(&dst), "2")
+
+	printer := spew.ConfigState{
+		Indent:                  " ",
+		DisablePointerAddresses: true,
+		DisableCapacities:       true,
+	}
+	require.Equal(t, printer.Sdump(src), printer.Sdump(dst), "3")
+	printer.Dump(src)
+}
+
+func TestComplexEnum2(t *testing.T) {
+	src := restaking.TokenValue{
+		Numerator: []restaking.Asset{
+			&restaking.AssetSOLTuple{
+				Elem0: 7777,
+			},
+			&restaking.AssetTokenTuple{
+				Elem0: ag_solanago.MustPublicKeyFromBase58("GPKjBDTNexAsis6zqGnioAzhauvHzs6UzGXKxx37HdkA"),
+				Elem1: toPtr[restaking.TokenPricingSource](&restaking.TokenPricingSourceSPLStakePoolTuple{
+					Address: ag_solanago.MustPublicKeyFromBase58("HdZM8mzEH7JAcswjJNgCC8Zmbu97LCzYo4WCSvFkfWKx"),
+				}),
+				Elem2: 8888,
+			},
+		},
+		Denominator: 1234567,
+	}
+
+	// encoding
+	buf := new(bytes.Buffer)
+	require.NoError(t, ag_binary.NewBorshEncoder(buf).Encode(src), "1")
+
+	dst := restaking.TokenValue{}
 	require.NoError(t, ag_binary.NewBorshDecoder(buf.Bytes()).Decode(&dst), "2")
 
 	printer := spew.ConfigState{
