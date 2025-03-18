@@ -18,6 +18,7 @@ func TestEncodeDecode_OperatorRunFundCommand(t *testing.T) {
 				params := new(OperatorRunFundCommand)
 				fu.Fuzz(params)
 				params.AccountMetaSlice = nil
+				params.ForceResetCommand = nil
 				buf := new(bytes.Buffer)
 				err := encodeT(*params, buf)
 				ag_require.NoError(t, err)

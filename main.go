@@ -808,7 +808,7 @@ func decodeErrorCode(rpcErr error) (errorCode int, ok bool) {
 						body.Id("inst").Dot(exportedArgName).Op("=").
 							Add(func() Code {
 								if isComplexEnum(arg.Type) {
-									return nil
+									return Op("&")
 								}
 								return Op("&")
 							}()).

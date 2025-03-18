@@ -4,12 +4,45 @@ package restaking
 
 import (
 	"fmt"
-	"github.com/davecgh/go-spew/spew"
 	ag_binary "github.com/gagliardetto/binary"
 	ag_solanago "github.com/gagliardetto/solana-go"
 )
 
-type Asset interface {
+type Asset struct {
+	Value asset
+}
+
+func (obj Asset) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	tmp := assetContainer{}
+	switch realvalue := obj.Value.(type) {
+	case AssetSOLTuple:
+		tmp.Enum = 0
+		tmp.SOL = realvalue
+	case AssetTokenTuple:
+		tmp.Enum = 1
+		tmp.Token = realvalue
+	}
+	return encoder.Encode(tmp)
+}
+
+func (obj *Asset) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	tmp := new(assetContainer)
+	err = decoder.Decode(tmp)
+	if err != nil {
+		return err
+	}
+	switch tmp.Enum {
+	case 0:
+		obj.Value = tmp.SOL
+	case 1:
+		obj.Value = tmp.Token
+	default:
+		return fmt.Errorf("unknown enum index: %v", tmp.Enum)
+	}
+	return nil
+}
+
+type asset interface {
 	isAsset()
 }
 
@@ -23,12 +56,89 @@ type AssetSOLTuple struct {
 	Elem0 uint64
 }
 
+func (obj AssetSOLTuple) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	// Serialize `Elem0` param:
+	err = encoder.Encode(obj.Elem0)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (obj *AssetSOLTuple) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	// Deserialize `Elem0`:
+	err = decoder.Decode(&obj.Elem0)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (_ AssetSOLTuple) isAsset() {}
 
 type AssetTokenTuple struct {
 	Elem0 ag_solanago.PublicKey
 	Elem1 *TokenPricingSource `bin:"optional"`
 	Elem2 uint64
+}
+
+func (obj AssetTokenTuple) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	// Serialize `Elem0` param:
+	err = encoder.Encode(obj.Elem0)
+	if err != nil {
+		return err
+	}
+	// Serialize `Elem1` param (optional):
+	{
+		if obj.Elem1 == nil {
+			err = encoder.WriteBool(false)
+			if err != nil {
+				return err
+			}
+		} else {
+			err = encoder.WriteBool(true)
+			if err != nil {
+				return err
+			}
+			err = encoder.Encode(obj.Elem1)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	// Serialize `Elem2` param:
+	err = encoder.Encode(obj.Elem2)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (obj *AssetTokenTuple) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	// Deserialize `Elem0`:
+	err = decoder.Decode(&obj.Elem0)
+	if err != nil {
+		return err
+	}
+	// Deserialize `Elem1` (optional):
+	{
+		ok, err := decoder.ReadBool()
+		if err != nil {
+			return err
+		}
+		if ok {
+			err = decoder.Decode(&obj.Elem1)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	// Deserialize `Elem2`:
+	err = decoder.Decode(&obj.Elem2)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (_ AssetTokenTuple) isAsset() {}
@@ -377,50 +487,23 @@ func (obj *AssetState) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err err
 }
 
 type ClaimUnrestakedVSTCommand struct {
-	State ClaimUnrestakedVSTCommandState
+	State *ClaimUnrestakedVSTCommandState
 }
 
 func (obj ClaimUnrestakedVSTCommand) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
 	// Serialize `State` param:
-	{
-		tmp := claimUnrestakedVSTCommandStateContainer{}
-		switch realvalue := obj.State.(type) {
-		case *ClaimUnrestakedVSTCommandStateNewTuple:
-			tmp.Enum = 0
-			tmp.New = *realvalue
-		case *ClaimUnrestakedVSTCommandStatePrepareTuple:
-			tmp.Enum = 1
-			tmp.Prepare = *realvalue
-		case *ClaimUnrestakedVSTCommandStateExecuteTuple:
-			tmp.Enum = 2
-			tmp.Execute = *realvalue
-		}
-		err := encoder.Encode(tmp)
-		if err != nil {
-			return err
-		}
+	err = encoder.Encode(obj.State)
+	if err != nil {
+		return err
 	}
 	return nil
 }
 
 func (obj *ClaimUnrestakedVSTCommand) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
 	// Deserialize `State`:
-	{
-		tmp := new(claimUnrestakedVSTCommandStateContainer)
-		err := decoder.Decode(tmp)
-		if err != nil {
-			return err
-		}
-		switch tmp.Enum {
-		case 0:
-			obj.State = (*ClaimUnrestakedVSTCommandStateNewTuple)(&tmp.Enum)
-		case 1:
-			obj.State = &tmp.Prepare
-		case 2:
-			obj.State = &tmp.Execute
-		default:
-			return fmt.Errorf("unknown enum index: %v", tmp.Enum)
-		}
+	err = decoder.Decode(&obj.State)
+	if err != nil {
+		return err
 	}
 	return nil
 }
@@ -568,7 +651,46 @@ func (obj *ClaimUnrestakedVSTCommandResult) UnmarshalWithDecoder(decoder *ag_bin
 	return nil
 }
 
-type ClaimUnrestakedVSTCommandState interface {
+type ClaimUnrestakedVSTCommandState struct {
+	Value claimUnrestakedVSTCommandState
+}
+
+func (obj ClaimUnrestakedVSTCommandState) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	tmp := claimUnrestakedVSTCommandStateContainer{}
+	switch realvalue := obj.Value.(type) {
+	case ClaimUnrestakedVSTCommandStateNewTuple:
+		tmp.Enum = 0
+		tmp.New = realvalue
+	case ClaimUnrestakedVSTCommandStatePrepareTuple:
+		tmp.Enum = 1
+		tmp.Prepare = realvalue
+	case ClaimUnrestakedVSTCommandStateExecuteTuple:
+		tmp.Enum = 2
+		tmp.Execute = realvalue
+	}
+	return encoder.Encode(tmp)
+}
+
+func (obj *ClaimUnrestakedVSTCommandState) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	tmp := new(claimUnrestakedVSTCommandStateContainer)
+	err = decoder.Decode(tmp)
+	if err != nil {
+		return err
+	}
+	switch tmp.Enum {
+	case 0:
+		obj.Value = tmp.New
+	case 1:
+		obj.Value = tmp.Prepare
+	case 2:
+		obj.Value = tmp.Execute
+	default:
+		return fmt.Errorf("unknown enum index: %v", tmp.Enum)
+	}
+	return nil
+}
+
+type claimUnrestakedVSTCommandState interface {
 	isClaimUnrestakedVSTCommandState()
 }
 
@@ -640,55 +762,23 @@ func (obj *ClaimUnrestakedVSTCommandStateExecuteTuple) UnmarshalWithDecoder(deco
 func (_ ClaimUnrestakedVSTCommandStateExecuteTuple) isClaimUnrestakedVSTCommandState() {}
 
 type ClaimUnstakedSOLCommand struct {
-	State ClaimUnstakedSOLCommandState
+	State *ClaimUnstakedSOLCommandState
 }
 
 func (obj ClaimUnstakedSOLCommand) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
 	// Serialize `State` param:
-	{
-		tmp := claimUnstakedSOLCommandStateContainer{}
-		switch realvalue := obj.State.(type) {
-		case *ClaimUnstakedSOLCommandStateNewTuple:
-			tmp.Enum = 0
-			tmp.New = *realvalue
-		case *ClaimUnstakedSOLCommandStatePrepareTuple:
-			tmp.Enum = 1
-			tmp.Prepare = *realvalue
-		case *ClaimUnstakedSOLCommandStateGetClaimableStakeAccountsTuple:
-			tmp.Enum = 2
-			tmp.GetClaimableStakeAccounts = *realvalue
-		case *ClaimUnstakedSOLCommandStateExecuteTuple:
-			tmp.Enum = 3
-			tmp.Execute = *realvalue
-		}
-		err := encoder.Encode(tmp)
-		if err != nil {
-			return err
-		}
+	err = encoder.Encode(obj.State)
+	if err != nil {
+		return err
 	}
 	return nil
 }
 
 func (obj *ClaimUnstakedSOLCommand) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
 	// Deserialize `State`:
-	{
-		tmp := new(claimUnstakedSOLCommandStateContainer)
-		err := decoder.Decode(tmp)
-		if err != nil {
-			return err
-		}
-		switch tmp.Enum {
-		case 0:
-			obj.State = (*ClaimUnstakedSOLCommandStateNewTuple)(&tmp.Enum)
-		case 1:
-			obj.State = &tmp.Prepare
-		case 2:
-			obj.State = &tmp.GetClaimableStakeAccounts
-		case 3:
-			obj.State = &tmp.Execute
-		default:
-			return fmt.Errorf("unknown enum index: %v", tmp.Enum)
-		}
+	err = decoder.Decode(&obj.State)
+	if err != nil {
+		return err
 	}
 	return nil
 }
@@ -846,7 +936,51 @@ func (obj *ClaimUnstakedSOLCommandResultAssetReceivable) UnmarshalWithDecoder(de
 	return nil
 }
 
-type ClaimUnstakedSOLCommandState interface {
+type ClaimUnstakedSOLCommandState struct {
+	Value claimUnstakedSOLCommandState
+}
+
+func (obj ClaimUnstakedSOLCommandState) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	tmp := claimUnstakedSOLCommandStateContainer{}
+	switch realvalue := obj.Value.(type) {
+	case ClaimUnstakedSOLCommandStateNewTuple:
+		tmp.Enum = 0
+		tmp.New = realvalue
+	case ClaimUnstakedSOLCommandStatePrepareTuple:
+		tmp.Enum = 1
+		tmp.Prepare = realvalue
+	case ClaimUnstakedSOLCommandStateGetClaimableStakeAccountsTuple:
+		tmp.Enum = 2
+		tmp.GetClaimableStakeAccounts = realvalue
+	case ClaimUnstakedSOLCommandStateExecuteTuple:
+		tmp.Enum = 3
+		tmp.Execute = realvalue
+	}
+	return encoder.Encode(tmp)
+}
+
+func (obj *ClaimUnstakedSOLCommandState) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	tmp := new(claimUnstakedSOLCommandStateContainer)
+	err = decoder.Decode(tmp)
+	if err != nil {
+		return err
+	}
+	switch tmp.Enum {
+	case 0:
+		obj.Value = tmp.New
+	case 1:
+		obj.Value = tmp.Prepare
+	case 2:
+		obj.Value = tmp.GetClaimableStakeAccounts
+	case 3:
+		obj.Value = tmp.Execute
+	default:
+		return fmt.Errorf("unknown enum index: %v", tmp.Enum)
+	}
+	return nil
+}
+
+type claimUnstakedSOLCommandState interface {
 	isClaimUnstakedSOLCommandState()
 }
 
@@ -955,50 +1089,23 @@ func (obj *ClaimUnstakedSOLCommandStateExecuteTuple) UnmarshalWithDecoder(decode
 func (_ ClaimUnstakedSOLCommandStateExecuteTuple) isClaimUnstakedSOLCommandState() {}
 
 type DelegateVSTCommand struct {
-	State DelegateVSTCommandState
+	State *DelegateVSTCommandState
 }
 
 func (obj DelegateVSTCommand) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
 	// Serialize `State` param:
-	{
-		tmp := delegateVSTCommandStateContainer{}
-		switch realvalue := obj.State.(type) {
-		case *DelegateVSTCommandStateNewTuple:
-			tmp.Enum = 0
-			tmp.New = *realvalue
-		case *DelegateVSTCommandStatePrepareTuple:
-			tmp.Enum = 1
-			tmp.Prepare = *realvalue
-		case *DelegateVSTCommandStateExecuteTuple:
-			tmp.Enum = 2
-			tmp.Execute = *realvalue
-		}
-		err := encoder.Encode(tmp)
-		if err != nil {
-			return err
-		}
+	err = encoder.Encode(obj.State)
+	if err != nil {
+		return err
 	}
 	return nil
 }
 
 func (obj *DelegateVSTCommand) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
 	// Deserialize `State`:
-	{
-		tmp := new(delegateVSTCommandStateContainer)
-		err := decoder.Decode(tmp)
-		if err != nil {
-			return err
-		}
-		switch tmp.Enum {
-		case 0:
-			obj.State = (*DelegateVSTCommandStateNewTuple)(&tmp.Enum)
-		case 1:
-			obj.State = &tmp.Prepare
-		case 2:
-			obj.State = &tmp.Execute
-		default:
-			return fmt.Errorf("unknown enum index: %v", tmp.Enum)
-		}
+	err = decoder.Decode(&obj.State)
+	if err != nil {
+		return err
 	}
 	return nil
 }
@@ -1091,7 +1198,46 @@ func (obj *DelegateVSTCommandResult) UnmarshalWithDecoder(decoder *ag_binary.Dec
 	return nil
 }
 
-type DelegateVSTCommandState interface {
+type DelegateVSTCommandState struct {
+	Value delegateVSTCommandState
+}
+
+func (obj DelegateVSTCommandState) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	tmp := delegateVSTCommandStateContainer{}
+	switch realvalue := obj.Value.(type) {
+	case DelegateVSTCommandStateNewTuple:
+		tmp.Enum = 0
+		tmp.New = realvalue
+	case DelegateVSTCommandStatePrepareTuple:
+		tmp.Enum = 1
+		tmp.Prepare = realvalue
+	case DelegateVSTCommandStateExecuteTuple:
+		tmp.Enum = 2
+		tmp.Execute = realvalue
+	}
+	return encoder.Encode(tmp)
+}
+
+func (obj *DelegateVSTCommandState) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	tmp := new(delegateVSTCommandStateContainer)
+	err = decoder.Decode(tmp)
+	if err != nil {
+		return err
+	}
+	switch tmp.Enum {
+	case 0:
+		obj.Value = tmp.New
+	case 1:
+		obj.Value = tmp.Prepare
+	case 2:
+		obj.Value = tmp.Execute
+	default:
+		return fmt.Errorf("unknown enum index: %v", tmp.Enum)
+	}
+	return nil
+}
+
+type delegateVSTCommandState interface {
 	isDelegateVSTCommandState()
 }
 
@@ -1163,50 +1309,23 @@ func (obj *DelegateVSTCommandStateExecuteTuple) UnmarshalWithDecoder(decoder *ag
 func (_ DelegateVSTCommandStateExecuteTuple) isDelegateVSTCommandState() {}
 
 type DenormalizeNTCommand struct {
-	State DenormalizeNTCommandState
+	State *DenormalizeNTCommandState
 }
 
 func (obj DenormalizeNTCommand) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
 	// Serialize `State` param:
-	{
-		tmp := denormalizeNTCommandStateContainer{}
-		switch realvalue := obj.State.(type) {
-		case *DenormalizeNTCommandStateNewTuple:
-			tmp.Enum = 0
-			tmp.New = *realvalue
-		case *DenormalizeNTCommandStatePrepareTuple:
-			tmp.Enum = 1
-			tmp.Prepare = *realvalue
-		case *DenormalizeNTCommandStateExecuteTuple:
-			tmp.Enum = 2
-			tmp.Execute = *realvalue
-		}
-		err := encoder.Encode(tmp)
-		if err != nil {
-			return err
-		}
+	err = encoder.Encode(obj.State)
+	if err != nil {
+		return err
 	}
 	return nil
 }
 
 func (obj *DenormalizeNTCommand) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
 	// Deserialize `State`:
-	{
-		tmp := new(denormalizeNTCommandStateContainer)
-		err := decoder.Decode(tmp)
-		if err != nil {
-			return err
-		}
-		switch tmp.Enum {
-		case 0:
-			obj.State = (*DenormalizeNTCommandStateNewTuple)(&tmp.Enum)
-		case 1:
-			obj.State = &tmp.Prepare
-		case 2:
-			obj.State = &tmp.Execute
-		default:
-			return fmt.Errorf("unknown enum index: %v", tmp.Enum)
-		}
+	err = decoder.Decode(&obj.State)
+	if err != nil {
+		return err
 	}
 	return nil
 }
@@ -1310,7 +1429,46 @@ func (obj *DenormalizeNTCommandResult) UnmarshalWithDecoder(decoder *ag_binary.D
 	return nil
 }
 
-type DenormalizeNTCommandState interface {
+type DenormalizeNTCommandState struct {
+	Value denormalizeNTCommandState
+}
+
+func (obj DenormalizeNTCommandState) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	tmp := denormalizeNTCommandStateContainer{}
+	switch realvalue := obj.Value.(type) {
+	case DenormalizeNTCommandStateNewTuple:
+		tmp.Enum = 0
+		tmp.New = realvalue
+	case DenormalizeNTCommandStatePrepareTuple:
+		tmp.Enum = 1
+		tmp.Prepare = realvalue
+	case DenormalizeNTCommandStateExecuteTuple:
+		tmp.Enum = 2
+		tmp.Execute = realvalue
+	}
+	return encoder.Encode(tmp)
+}
+
+func (obj *DenormalizeNTCommandState) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	tmp := new(denormalizeNTCommandStateContainer)
+	err = decoder.Decode(tmp)
+	if err != nil {
+		return err
+	}
+	switch tmp.Enum {
+	case 0:
+		obj.Value = tmp.New
+	case 1:
+		obj.Value = tmp.Prepare
+	case 2:
+		obj.Value = tmp.Execute
+	default:
+		return fmt.Errorf("unknown enum index: %v", tmp.Enum)
+	}
+	return nil
+}
+
+type denormalizeNTCommandState interface {
 	isDenormalizeNTCommandState()
 }
 
@@ -2223,55 +2381,23 @@ func (obj *HarvestRewardCommandResult) UnmarshalWithDecoder(decoder *ag_binary.D
 }
 
 type InitializeCommand struct {
-	State InitializeCommandState
+	State *InitializeCommandState
 }
 
 func (obj InitializeCommand) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
 	// Serialize `State` param:
-	{
-		tmp := initializeCommandStateContainer{}
-		switch realvalue := obj.State.(type) {
-		case *InitializeCommandStateNewTuple:
-			tmp.Enum = 0
-			tmp.New = *realvalue
-		case *InitializeCommandStatePrepareSingleRestakingVaultUpdateTuple:
-			tmp.Enum = 1
-			tmp.PrepareSingleRestakingVaultUpdate = *realvalue
-		case *InitializeCommandStatePrepareRestakingVaultUpdateTuple:
-			tmp.Enum = 2
-			tmp.PrepareRestakingVaultUpdate = *realvalue
-		case *InitializeCommandStateExecuteRestakingVaultUpdateTuple:
-			tmp.Enum = 3
-			tmp.ExecuteRestakingVaultUpdate = *realvalue
-		}
-		err := encoder.Encode(tmp)
-		if err != nil {
-			return err
-		}
+	err = encoder.Encode(obj.State)
+	if err != nil {
+		return err
 	}
 	return nil
 }
 
 func (obj *InitializeCommand) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
 	// Deserialize `State`:
-	{
-		tmp := new(initializeCommandStateContainer)
-		err := decoder.Decode(tmp)
-		if err != nil {
-			return err
-		}
-		switch tmp.Enum {
-		case 0:
-			obj.State = (*InitializeCommandStateNewTuple)(&tmp.Enum)
-		case 1:
-			obj.State = &tmp.PrepareSingleRestakingVaultUpdate
-		case 2:
-			obj.State = &tmp.PrepareRestakingVaultUpdate
-		case 3:
-			obj.State = &tmp.ExecuteRestakingVaultUpdate
-		default:
-			return fmt.Errorf("unknown enum index: %v", tmp.Enum)
-		}
+	err = decoder.Decode(&obj.State)
+	if err != nil {
+		return err
 	}
 	return nil
 }
@@ -2462,7 +2588,51 @@ func (obj *InitializeCommandResultRestakingVaultUpdated) UnmarshalWithDecoder(de
 	return nil
 }
 
-type InitializeCommandState interface {
+type InitializeCommandState struct {
+	Value initializeCommandState
+}
+
+func (obj InitializeCommandState) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	tmp := initializeCommandStateContainer{}
+	switch realvalue := obj.Value.(type) {
+	case InitializeCommandStateNewTuple:
+		tmp.Enum = 0
+		tmp.New = realvalue
+	case InitializeCommandStatePrepareSingleRestakingVaultUpdateTuple:
+		tmp.Enum = 1
+		tmp.PrepareSingleRestakingVaultUpdate = realvalue
+	case InitializeCommandStatePrepareRestakingVaultUpdateTuple:
+		tmp.Enum = 2
+		tmp.PrepareRestakingVaultUpdate = realvalue
+	case InitializeCommandStateExecuteRestakingVaultUpdateTuple:
+		tmp.Enum = 3
+		tmp.ExecuteRestakingVaultUpdate = realvalue
+	}
+	return encoder.Encode(tmp)
+}
+
+func (obj *InitializeCommandState) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	tmp := new(initializeCommandStateContainer)
+	err = decoder.Decode(tmp)
+	if err != nil {
+		return err
+	}
+	switch tmp.Enum {
+	case 0:
+		obj.Value = tmp.New
+	case 1:
+		obj.Value = tmp.PrepareSingleRestakingVaultUpdate
+	case 2:
+		obj.Value = tmp.PrepareRestakingVaultUpdate
+	case 3:
+		obj.Value = tmp.ExecuteRestakingVaultUpdate
+	default:
+		return fmt.Errorf("unknown enum index: %v", tmp.Enum)
+	}
+	return nil
+}
+
+type initializeCommandState interface {
 	isInitializeCommandState()
 }
 
@@ -2570,50 +2740,23 @@ func (obj *InitializeCommandStateExecuteRestakingVaultUpdateTuple) UnmarshalWith
 func (_ InitializeCommandStateExecuteRestakingVaultUpdateTuple) isInitializeCommandState() {}
 
 type NormalizeSTCommand struct {
-	State NormalizeSTCommandState
+	State *NormalizeSTCommandState
 }
 
 func (obj NormalizeSTCommand) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
 	// Serialize `State` param:
-	{
-		tmp := normalizeSTCommandStateContainer{}
-		switch realvalue := obj.State.(type) {
-		case *NormalizeSTCommandStateNewTuple:
-			tmp.Enum = 0
-			tmp.New = *realvalue
-		case *NormalizeSTCommandStatePrepareTuple:
-			tmp.Enum = 1
-			tmp.Prepare = *realvalue
-		case *NormalizeSTCommandStateExecuteTuple:
-			tmp.Enum = 2
-			tmp.Execute = *realvalue
-		}
-		err := encoder.Encode(tmp)
-		if err != nil {
-			return err
-		}
+	err = encoder.Encode(obj.State)
+	if err != nil {
+		return err
 	}
 	return nil
 }
 
 func (obj *NormalizeSTCommand) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
 	// Deserialize `State`:
-	{
-		tmp := new(normalizeSTCommandStateContainer)
-		err := decoder.Decode(tmp)
-		if err != nil {
-			return err
-		}
-		switch tmp.Enum {
-		case 0:
-			obj.State = (*NormalizeSTCommandStateNewTuple)(&tmp.Enum)
-		case 1:
-			obj.State = &tmp.Prepare
-		case 2:
-			obj.State = &tmp.Execute
-		default:
-			return fmt.Errorf("unknown enum index: %v", tmp.Enum)
-		}
+	err = decoder.Decode(&obj.State)
+	if err != nil {
+		return err
 	}
 	return nil
 }
@@ -2706,7 +2849,46 @@ func (obj *NormalizeSTCommandResult) UnmarshalWithDecoder(decoder *ag_binary.Dec
 	return nil
 }
 
-type NormalizeSTCommandState interface {
+type NormalizeSTCommandState struct {
+	Value normalizeSTCommandState
+}
+
+func (obj NormalizeSTCommandState) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	tmp := normalizeSTCommandStateContainer{}
+	switch realvalue := obj.Value.(type) {
+	case NormalizeSTCommandStateNewTuple:
+		tmp.Enum = 0
+		tmp.New = realvalue
+	case NormalizeSTCommandStatePrepareTuple:
+		tmp.Enum = 1
+		tmp.Prepare = realvalue
+	case NormalizeSTCommandStateExecuteTuple:
+		tmp.Enum = 2
+		tmp.Execute = realvalue
+	}
+	return encoder.Encode(tmp)
+}
+
+func (obj *NormalizeSTCommandState) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	tmp := new(normalizeSTCommandStateContainer)
+	err = decoder.Decode(tmp)
+	if err != nil {
+		return err
+	}
+	switch tmp.Enum {
+	case 0:
+		obj.Value = tmp.New
+	case 1:
+		obj.Value = tmp.Prepare
+	case 2:
+		obj.Value = tmp.Execute
+	default:
+		return fmt.Errorf("unknown enum index: %v", tmp.Enum)
+	}
+	return nil
+}
+
+type normalizeSTCommandState interface {
 	isNormalizeSTCommandState()
 }
 
@@ -2840,7 +3022,7 @@ type NormalizedSupportedToken struct {
 	Decimals                 uint8
 	WithdrawalReservedAmount uint64
 	OneTokenAsSol            uint64
-	PricingSource            TokenPricingSource
+	PricingSource            *TokenPricingSource
 	Reserved                 [14]uint8
 }
 
@@ -2881,35 +3063,9 @@ func (obj NormalizedSupportedToken) MarshalWithEncoder(encoder *ag_binary.Encode
 		return err
 	}
 	// Serialize `PricingSource` param:
-	{
-		tmp := tokenPricingSourceContainer{}
-		switch realvalue := obj.PricingSource.(type) {
-		case *TokenPricingSourceSPLStakePoolTuple:
-			tmp.Enum = 0
-			tmp.SPLStakePool = *realvalue
-		case *TokenPricingSourceMarinadeStakePoolTuple:
-			tmp.Enum = 1
-			tmp.MarinadeStakePool = *realvalue
-		case *TokenPricingSourceJitoRestakingVaultTuple:
-			tmp.Enum = 2
-			tmp.JitoRestakingVault = *realvalue
-		case *TokenPricingSourceFragmetricNormalizedTokenPoolTuple:
-			tmp.Enum = 3
-			tmp.FragmetricNormalizedTokenPool = *realvalue
-		case *TokenPricingSourceFragmetricRestakingFundTuple:
-			tmp.Enum = 4
-			tmp.FragmetricRestakingFund = *realvalue
-		case *TokenPricingSourceOrcaDEXLiquidityPoolTuple:
-			tmp.Enum = 5
-			tmp.OrcaDEXLiquidityPool = *realvalue
-		case *TokenPricingSourceSanctumSingleValidatorSPLStakePoolTuple:
-			tmp.Enum = 6
-			tmp.SanctumSingleValidatorSPLStakePool = *realvalue
-		}
-		err := encoder.Encode(tmp)
-		if err != nil {
-			return err
-		}
+	err = encoder.Encode(obj.PricingSource)
+	if err != nil {
+		return err
 	}
 	// Serialize `Reserved` param:
 	err = encoder.Encode(obj.Reserved)
@@ -2956,30 +3112,9 @@ func (obj *NormalizedSupportedToken) UnmarshalWithDecoder(decoder *ag_binary.Dec
 		return err
 	}
 	// Deserialize `PricingSource`:
-	{
-		tmp := new(tokenPricingSourceContainer)
-		err := decoder.Decode(tmp)
-		if err != nil {
-			return err
-		}
-		switch tmp.Enum {
-		case 0:
-			obj.PricingSource = &tmp.SPLStakePool
-		case 1:
-			obj.PricingSource = &tmp.MarinadeStakePool
-		case 2:
-			obj.PricingSource = &tmp.JitoRestakingVault
-		case 3:
-			obj.PricingSource = &tmp.FragmetricNormalizedTokenPool
-		case 4:
-			obj.PricingSource = &tmp.FragmetricRestakingFund
-		case 5:
-			obj.PricingSource = &tmp.OrcaDEXLiquidityPool
-		case 6:
-			obj.PricingSource = &tmp.SanctumSingleValidatorSPLStakePool
-		default:
-			return fmt.Errorf("unknown enum index: %v", tmp.Enum)
-		}
+	err = decoder.Decode(&obj.PricingSource)
+	if err != nil {
+		return err
 	}
 	// Deserialize `Reserved`:
 	err = decoder.Decode(&obj.Reserved)
@@ -3341,7 +3476,101 @@ func (obj *NormalizedTokenWithdrawalAccount) UnmarshalWithDecoder(decoder *ag_bi
 	return nil
 }
 
-type OperationCommand interface {
+type OperationCommand struct {
+	Value operationCommand
+}
+
+func (obj OperationCommand) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	tmp := operationCommandContainer{}
+	switch realvalue := obj.Value.(type) {
+	case OperationCommandInitializeTuple:
+		tmp.Enum = 0
+		tmp.Initialize = realvalue
+	case OperationCommandEnqueueWithdrawalBatchTuple:
+		tmp.Enum = 1
+		tmp.EnqueueWithdrawalBatch = realvalue
+	case OperationCommandClaimUnrestakedVSTTuple:
+		tmp.Enum = 2
+		tmp.ClaimUnrestakedVST = realvalue
+	case OperationCommandDenormalizeNTTuple:
+		tmp.Enum = 3
+		tmp.DenormalizeNT = realvalue
+	case OperationCommandUndelegateVSTTuple:
+		tmp.Enum = 4
+		tmp.UndelegateVST = realvalue
+	case OperationCommandUnrestakeVRTTuple:
+		tmp.Enum = 5
+		tmp.UnrestakeVRT = realvalue
+	case OperationCommandClaimUnstakedSOLTuple:
+		tmp.Enum = 6
+		tmp.ClaimUnstakedSOL = realvalue
+	case OperationCommandProcessWithdrawalBatchTuple:
+		tmp.Enum = 7
+		tmp.ProcessWithdrawalBatch = realvalue
+	case OperationCommandUnstakeLSTTuple:
+		tmp.Enum = 8
+		tmp.UnstakeLST = realvalue
+	case OperationCommandStakeSOLTuple:
+		tmp.Enum = 9
+		tmp.StakeSOL = realvalue
+	case OperationCommandNormalizeSTTuple:
+		tmp.Enum = 10
+		tmp.NormalizeST = realvalue
+	case OperationCommandRestakeVSTTuple:
+		tmp.Enum = 11
+		tmp.RestakeVST = realvalue
+	case OperationCommandDelegateVSTTuple:
+		tmp.Enum = 12
+		tmp.DelegateVST = realvalue
+	case OperationCommandHarvestRewardTuple:
+		tmp.Enum = 13
+		tmp.HarvestReward = realvalue
+	}
+	return encoder.Encode(tmp)
+}
+
+func (obj *OperationCommand) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	tmp := new(operationCommandContainer)
+	err = decoder.Decode(tmp)
+	if err != nil {
+		return err
+	}
+	switch tmp.Enum {
+	case 0:
+		obj.Value = tmp.Initialize
+	case 1:
+		obj.Value = tmp.EnqueueWithdrawalBatch
+	case 2:
+		obj.Value = tmp.ClaimUnrestakedVST
+	case 3:
+		obj.Value = tmp.DenormalizeNT
+	case 4:
+		obj.Value = tmp.UndelegateVST
+	case 5:
+		obj.Value = tmp.UnrestakeVRT
+	case 6:
+		obj.Value = tmp.ClaimUnstakedSOL
+	case 7:
+		obj.Value = tmp.ProcessWithdrawalBatch
+	case 8:
+		obj.Value = tmp.UnstakeLST
+	case 9:
+		obj.Value = tmp.StakeSOL
+	case 10:
+		obj.Value = tmp.NormalizeST
+	case 11:
+		obj.Value = tmp.RestakeVST
+	case 12:
+		obj.Value = tmp.DelegateVST
+	case 13:
+		obj.Value = tmp.HarvestReward
+	default:
+		return fmt.Errorf("unknown enum index: %v", tmp.Enum)
+	}
+	return nil
+}
+
+type operationCommand interface {
 	isOperationCommand()
 }
 
@@ -3367,10 +3596,46 @@ type OperationCommandInitializeTuple struct {
 	Elem0 InitializeCommand
 }
 
+func (obj OperationCommandInitializeTuple) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	// Serialize `Elem0` param:
+	err = encoder.Encode(obj.Elem0)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (obj *OperationCommandInitializeTuple) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	// Deserialize `Elem0`:
+	err = decoder.Decode(&obj.Elem0)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (_ OperationCommandInitializeTuple) isOperationCommand() {}
 
 type OperationCommandEnqueueWithdrawalBatchTuple struct {
 	Elem0 EnqueueWithdrawalBatchCommand
+}
+
+func (obj OperationCommandEnqueueWithdrawalBatchTuple) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	// Serialize `Elem0` param:
+	err = encoder.Encode(obj.Elem0)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (obj *OperationCommandEnqueueWithdrawalBatchTuple) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	// Deserialize `Elem0`:
+	err = decoder.Decode(&obj.Elem0)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (_ OperationCommandEnqueueWithdrawalBatchTuple) isOperationCommand() {}
@@ -3379,10 +3644,46 @@ type OperationCommandClaimUnrestakedVSTTuple struct {
 	Elem0 ClaimUnrestakedVSTCommand
 }
 
+func (obj OperationCommandClaimUnrestakedVSTTuple) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	// Serialize `Elem0` param:
+	err = encoder.Encode(obj.Elem0)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (obj *OperationCommandClaimUnrestakedVSTTuple) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	// Deserialize `Elem0`:
+	err = decoder.Decode(&obj.Elem0)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (_ OperationCommandClaimUnrestakedVSTTuple) isOperationCommand() {}
 
 type OperationCommandDenormalizeNTTuple struct {
 	Elem0 DenormalizeNTCommand
+}
+
+func (obj OperationCommandDenormalizeNTTuple) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	// Serialize `Elem0` param:
+	err = encoder.Encode(obj.Elem0)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (obj *OperationCommandDenormalizeNTTuple) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	// Deserialize `Elem0`:
+	err = decoder.Decode(&obj.Elem0)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (_ OperationCommandDenormalizeNTTuple) isOperationCommand() {}
@@ -3391,10 +3692,46 @@ type OperationCommandUndelegateVSTTuple struct {
 	Elem0 UndelegateVSTCommand
 }
 
+func (obj OperationCommandUndelegateVSTTuple) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	// Serialize `Elem0` param:
+	err = encoder.Encode(obj.Elem0)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (obj *OperationCommandUndelegateVSTTuple) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	// Deserialize `Elem0`:
+	err = decoder.Decode(&obj.Elem0)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (_ OperationCommandUndelegateVSTTuple) isOperationCommand() {}
 
 type OperationCommandUnrestakeVRTTuple struct {
 	Elem0 UnrestakeVRTCommand
+}
+
+func (obj OperationCommandUnrestakeVRTTuple) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	// Serialize `Elem0` param:
+	err = encoder.Encode(obj.Elem0)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (obj *OperationCommandUnrestakeVRTTuple) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	// Deserialize `Elem0`:
+	err = decoder.Decode(&obj.Elem0)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (_ OperationCommandUnrestakeVRTTuple) isOperationCommand() {}
@@ -3403,10 +3740,46 @@ type OperationCommandClaimUnstakedSOLTuple struct {
 	Elem0 ClaimUnstakedSOLCommand
 }
 
+func (obj OperationCommandClaimUnstakedSOLTuple) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	// Serialize `Elem0` param:
+	err = encoder.Encode(obj.Elem0)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (obj *OperationCommandClaimUnstakedSOLTuple) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	// Deserialize `Elem0`:
+	err = decoder.Decode(&obj.Elem0)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (_ OperationCommandClaimUnstakedSOLTuple) isOperationCommand() {}
 
 type OperationCommandProcessWithdrawalBatchTuple struct {
 	Elem0 ProcessWithdrawalBatchCommand
+}
+
+func (obj OperationCommandProcessWithdrawalBatchTuple) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	// Serialize `Elem0` param:
+	err = encoder.Encode(obj.Elem0)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (obj *OperationCommandProcessWithdrawalBatchTuple) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	// Deserialize `Elem0`:
+	err = decoder.Decode(&obj.Elem0)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (_ OperationCommandProcessWithdrawalBatchTuple) isOperationCommand() {}
@@ -3415,10 +3788,46 @@ type OperationCommandUnstakeLSTTuple struct {
 	Elem0 UnstakeLSTCommand
 }
 
+func (obj OperationCommandUnstakeLSTTuple) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	// Serialize `Elem0` param:
+	err = encoder.Encode(obj.Elem0)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (obj *OperationCommandUnstakeLSTTuple) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	// Deserialize `Elem0`:
+	err = decoder.Decode(&obj.Elem0)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (_ OperationCommandUnstakeLSTTuple) isOperationCommand() {}
 
 type OperationCommandStakeSOLTuple struct {
 	Elem0 StakeSOLCommand
+}
+
+func (obj OperationCommandStakeSOLTuple) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	// Serialize `Elem0` param:
+	err = encoder.Encode(obj.Elem0)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (obj *OperationCommandStakeSOLTuple) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	// Deserialize `Elem0`:
+	err = decoder.Decode(&obj.Elem0)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (_ OperationCommandStakeSOLTuple) isOperationCommand() {}
@@ -3427,10 +3836,46 @@ type OperationCommandNormalizeSTTuple struct {
 	Elem0 NormalizeSTCommand
 }
 
+func (obj OperationCommandNormalizeSTTuple) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	// Serialize `Elem0` param:
+	err = encoder.Encode(obj.Elem0)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (obj *OperationCommandNormalizeSTTuple) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	// Deserialize `Elem0`:
+	err = decoder.Decode(&obj.Elem0)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (_ OperationCommandNormalizeSTTuple) isOperationCommand() {}
 
 type OperationCommandRestakeVSTTuple struct {
 	Elem0 RestakeVSTCommand
+}
+
+func (obj OperationCommandRestakeVSTTuple) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	// Serialize `Elem0` param:
+	err = encoder.Encode(obj.Elem0)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (obj *OperationCommandRestakeVSTTuple) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	// Deserialize `Elem0`:
+	err = decoder.Decode(&obj.Elem0)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (_ OperationCommandRestakeVSTTuple) isOperationCommand() {}
@@ -3439,10 +3884,46 @@ type OperationCommandDelegateVSTTuple struct {
 	Elem0 DelegateVSTCommand
 }
 
+func (obj OperationCommandDelegateVSTTuple) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	// Serialize `Elem0` param:
+	err = encoder.Encode(obj.Elem0)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (obj *OperationCommandDelegateVSTTuple) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	// Deserialize `Elem0`:
+	err = decoder.Decode(&obj.Elem0)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (_ OperationCommandDelegateVSTTuple) isOperationCommand() {}
 
 type OperationCommandHarvestRewardTuple struct {
 	Elem0 HarvestRewardCommand
+}
+
+func (obj OperationCommandHarvestRewardTuple) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	// Serialize `Elem0` param:
+	err = encoder.Encode(obj.Elem0)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (obj *OperationCommandHarvestRewardTuple) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	// Deserialize `Elem0`:
+	err = decoder.Decode(&obj.Elem0)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (_ OperationCommandHarvestRewardTuple) isOperationCommand() {}
@@ -3525,62 +4006,21 @@ func (obj *OperationCommandAccountMetaPod) UnmarshalWithDecoder(decoder *ag_bina
 }
 
 type OperationCommandEntry struct {
-	Command          OperationCommand
+	Command          *OperationCommand
+	PricingSource    *TokenPricingSource
 	RequiredAccounts []OperationCommandAccountMeta
 }
 
 func (obj OperationCommandEntry) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
 	// Serialize `Command` param:
-	{
-		tmp := operationCommandContainer{}
-		switch realvalue := obj.Command.(type) {
-		case *OperationCommandInitializeTuple:
-			tmp.Enum = 0
-			tmp.Initialize = *realvalue
-		case *OperationCommandEnqueueWithdrawalBatchTuple:
-			tmp.Enum = 1
-			tmp.EnqueueWithdrawalBatch = *realvalue
-		case *OperationCommandClaimUnrestakedVSTTuple:
-			tmp.Enum = 2
-			tmp.ClaimUnrestakedVST = *realvalue
-		case *OperationCommandDenormalizeNTTuple:
-			tmp.Enum = 3
-			tmp.DenormalizeNT = *realvalue
-		case *OperationCommandUndelegateVSTTuple:
-			tmp.Enum = 4
-			tmp.UndelegateVST = *realvalue
-		case *OperationCommandUnrestakeVRTTuple:
-			tmp.Enum = 5
-			tmp.UnrestakeVRT = *realvalue
-		case *OperationCommandClaimUnstakedSOLTuple:
-			tmp.Enum = 6
-			tmp.ClaimUnstakedSOL = *realvalue
-		case *OperationCommandProcessWithdrawalBatchTuple:
-			tmp.Enum = 7
-			tmp.ProcessWithdrawalBatch = *realvalue
-		case *OperationCommandUnstakeLSTTuple:
-			tmp.Enum = 8
-			tmp.UnstakeLST = *realvalue
-		case *OperationCommandStakeSOLTuple:
-			tmp.Enum = 9
-			tmp.StakeSOL = *realvalue
-		case *OperationCommandNormalizeSTTuple:
-			tmp.Enum = 10
-			tmp.NormalizeST = *realvalue
-		case *OperationCommandRestakeVSTTuple:
-			tmp.Enum = 11
-			tmp.RestakeVST = *realvalue
-		case *OperationCommandDelegateVSTTuple:
-			tmp.Enum = 12
-			tmp.DelegateVST = *realvalue
-		case *OperationCommandHarvestRewardTuple:
-			tmp.Enum = 13
-			tmp.HarvestReward = *realvalue
-		}
-		err := encoder.Encode(tmp)
-		if err != nil {
-			return err
-		}
+	err = encoder.Encode(obj.Command)
+	if err != nil {
+		return err
+	}
+	// Serialize `PricingSource` param:
+	err = encoder.Encode(obj.PricingSource)
+	if err != nil {
+		return err
 	}
 	// Serialize `RequiredAccounts` param:
 	err = encoder.Encode(obj.RequiredAccounts)
@@ -3592,44 +4032,14 @@ func (obj OperationCommandEntry) MarshalWithEncoder(encoder *ag_binary.Encoder) 
 
 func (obj *OperationCommandEntry) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
 	// Deserialize `Command`:
-	{
-		tmp := new(operationCommandContainer)
-		err := decoder.Decode(tmp)
-		if err != nil {
-			return err
-		}
-		switch tmp.Enum {
-		case 0:
-			obj.Command = &tmp.Initialize
-		case 1:
-			obj.Command = &tmp.EnqueueWithdrawalBatch
-		case 2:
-			obj.Command = &tmp.ClaimUnrestakedVST
-		case 3:
-			obj.Command = &tmp.DenormalizeNT
-		case 4:
-			obj.Command = &tmp.UndelegateVST
-		case 5:
-			obj.Command = &tmp.UnrestakeVRT
-		case 6:
-			obj.Command = &tmp.ClaimUnstakedSOL
-		case 7:
-			obj.Command = &tmp.ProcessWithdrawalBatch
-		case 8:
-			obj.Command = &tmp.UnstakeLST
-		case 9:
-			obj.Command = &tmp.StakeSOL
-		case 10:
-			obj.Command = &tmp.NormalizeST
-		case 11:
-			obj.Command = &tmp.RestakeVST
-		case 12:
-			obj.Command = &tmp.DelegateVST
-		case 13:
-			obj.Command = &tmp.HarvestReward
-		default:
-			return fmt.Errorf("unknown enum index: %v", tmp.Enum)
-		}
+	err = decoder.Decode(&obj.Command)
+	if err != nil {
+		return err
+	}
+	// Deserialize `PricingSource`:
+	err = decoder.Decode(&obj.PricingSource)
+	if err != nil {
+		return err
 	}
 	// Deserialize `RequiredAccounts`:
 	err = decoder.Decode(&obj.RequiredAccounts)
@@ -3727,7 +4137,101 @@ func (obj *OperationCommandPod) UnmarshalWithDecoder(decoder *ag_binary.Decoder)
 	return nil
 }
 
-type OperationCommandResult interface {
+type OperationCommandResult struct {
+	Value operationCommandResult
+}
+
+func (obj OperationCommandResult) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	tmp := operationCommandResultContainer{}
+	switch realvalue := obj.Value.(type) {
+	case OperationCommandResultInitializeTuple:
+		tmp.Enum = 0
+		tmp.Initialize = realvalue
+	case OperationCommandResultEnqueueWithdrawalBatchTuple:
+		tmp.Enum = 1
+		tmp.EnqueueWithdrawalBatch = realvalue
+	case OperationCommandResultClaimUnrestakedVSTTuple:
+		tmp.Enum = 2
+		tmp.ClaimUnrestakedVST = realvalue
+	case OperationCommandResultDenormalizeNTTuple:
+		tmp.Enum = 3
+		tmp.DenormalizeNT = realvalue
+	case OperationCommandResultUndelegateVSTTuple:
+		tmp.Enum = 4
+		tmp.UndelegateVST = realvalue
+	case OperationCommandResultUnrestakeVRTTuple:
+		tmp.Enum = 5
+		tmp.UnrestakeVRT = realvalue
+	case OperationCommandResultClaimUnstakedSOLTuple:
+		tmp.Enum = 6
+		tmp.ClaimUnstakedSOL = realvalue
+	case OperationCommandResultProcessWithdrawalBatchTuple:
+		tmp.Enum = 7
+		tmp.ProcessWithdrawalBatch = realvalue
+	case OperationCommandResultUnstakeLSTTuple:
+		tmp.Enum = 8
+		tmp.UnstakeLST = realvalue
+	case OperationCommandResultStakeSOLTuple:
+		tmp.Enum = 9
+		tmp.StakeSOL = realvalue
+	case OperationCommandResultNormalizeSTTuple:
+		tmp.Enum = 10
+		tmp.NormalizeST = realvalue
+	case OperationCommandResultRestakeVSTTuple:
+		tmp.Enum = 11
+		tmp.RestakeVST = realvalue
+	case OperationCommandResultDelegateVSTTuple:
+		tmp.Enum = 12
+		tmp.DelegateVST = realvalue
+	case OperationCommandResultHarvestRewardTuple:
+		tmp.Enum = 13
+		tmp.HarvestReward = realvalue
+	}
+	return encoder.Encode(tmp)
+}
+
+func (obj *OperationCommandResult) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	tmp := new(operationCommandResultContainer)
+	err = decoder.Decode(tmp)
+	if err != nil {
+		return err
+	}
+	switch tmp.Enum {
+	case 0:
+		obj.Value = tmp.Initialize
+	case 1:
+		obj.Value = tmp.EnqueueWithdrawalBatch
+	case 2:
+		obj.Value = tmp.ClaimUnrestakedVST
+	case 3:
+		obj.Value = tmp.DenormalizeNT
+	case 4:
+		obj.Value = tmp.UndelegateVST
+	case 5:
+		obj.Value = tmp.UnrestakeVRT
+	case 6:
+		obj.Value = tmp.ClaimUnstakedSOL
+	case 7:
+		obj.Value = tmp.ProcessWithdrawalBatch
+	case 8:
+		obj.Value = tmp.UnstakeLST
+	case 9:
+		obj.Value = tmp.StakeSOL
+	case 10:
+		obj.Value = tmp.NormalizeST
+	case 11:
+		obj.Value = tmp.RestakeVST
+	case 12:
+		obj.Value = tmp.DelegateVST
+	case 13:
+		obj.Value = tmp.HarvestReward
+	default:
+		return fmt.Errorf("unknown enum index: %v", tmp.Enum)
+	}
+	return nil
+}
+
+type operationCommandResult interface {
 	isOperationCommandResult()
 }
 
@@ -3753,10 +4257,46 @@ type OperationCommandResultInitializeTuple struct {
 	Elem0 InitializeCommandResult
 }
 
+func (obj OperationCommandResultInitializeTuple) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	// Serialize `Elem0` param:
+	err = encoder.Encode(obj.Elem0)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (obj *OperationCommandResultInitializeTuple) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	// Deserialize `Elem0`:
+	err = decoder.Decode(&obj.Elem0)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (_ OperationCommandResultInitializeTuple) isOperationCommandResult() {}
 
 type OperationCommandResultEnqueueWithdrawalBatchTuple struct {
 	Elem0 EnqueueWithdrawalBatchCommandResult
+}
+
+func (obj OperationCommandResultEnqueueWithdrawalBatchTuple) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	// Serialize `Elem0` param:
+	err = encoder.Encode(obj.Elem0)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (obj *OperationCommandResultEnqueueWithdrawalBatchTuple) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	// Deserialize `Elem0`:
+	err = decoder.Decode(&obj.Elem0)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (_ OperationCommandResultEnqueueWithdrawalBatchTuple) isOperationCommandResult() {}
@@ -3765,10 +4305,46 @@ type OperationCommandResultClaimUnrestakedVSTTuple struct {
 	Elem0 ClaimUnrestakedVSTCommandResult
 }
 
+func (obj OperationCommandResultClaimUnrestakedVSTTuple) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	// Serialize `Elem0` param:
+	err = encoder.Encode(obj.Elem0)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (obj *OperationCommandResultClaimUnrestakedVSTTuple) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	// Deserialize `Elem0`:
+	err = decoder.Decode(&obj.Elem0)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (_ OperationCommandResultClaimUnrestakedVSTTuple) isOperationCommandResult() {}
 
 type OperationCommandResultDenormalizeNTTuple struct {
 	Elem0 DenormalizeNTCommandResult
+}
+
+func (obj OperationCommandResultDenormalizeNTTuple) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	// Serialize `Elem0` param:
+	err = encoder.Encode(obj.Elem0)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (obj *OperationCommandResultDenormalizeNTTuple) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	// Deserialize `Elem0`:
+	err = decoder.Decode(&obj.Elem0)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (_ OperationCommandResultDenormalizeNTTuple) isOperationCommandResult() {}
@@ -3777,10 +4353,46 @@ type OperationCommandResultUndelegateVSTTuple struct {
 	Elem0 UndelegateVSTCommandResult
 }
 
+func (obj OperationCommandResultUndelegateVSTTuple) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	// Serialize `Elem0` param:
+	err = encoder.Encode(obj.Elem0)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (obj *OperationCommandResultUndelegateVSTTuple) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	// Deserialize `Elem0`:
+	err = decoder.Decode(&obj.Elem0)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (_ OperationCommandResultUndelegateVSTTuple) isOperationCommandResult() {}
 
 type OperationCommandResultUnrestakeVRTTuple struct {
 	Elem0 UnrestakeVRTCommandResult
+}
+
+func (obj OperationCommandResultUnrestakeVRTTuple) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	// Serialize `Elem0` param:
+	err = encoder.Encode(obj.Elem0)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (obj *OperationCommandResultUnrestakeVRTTuple) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	// Deserialize `Elem0`:
+	err = decoder.Decode(&obj.Elem0)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (_ OperationCommandResultUnrestakeVRTTuple) isOperationCommandResult() {}
@@ -3789,10 +4401,46 @@ type OperationCommandResultClaimUnstakedSOLTuple struct {
 	Elem0 ClaimUnstakedSOLCommandResult
 }
 
+func (obj OperationCommandResultClaimUnstakedSOLTuple) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	// Serialize `Elem0` param:
+	err = encoder.Encode(obj.Elem0)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (obj *OperationCommandResultClaimUnstakedSOLTuple) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	// Deserialize `Elem0`:
+	err = decoder.Decode(&obj.Elem0)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (_ OperationCommandResultClaimUnstakedSOLTuple) isOperationCommandResult() {}
 
 type OperationCommandResultProcessWithdrawalBatchTuple struct {
 	Elem0 ProcessWithdrawalBatchCommandResult
+}
+
+func (obj OperationCommandResultProcessWithdrawalBatchTuple) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	// Serialize `Elem0` param:
+	err = encoder.Encode(obj.Elem0)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (obj *OperationCommandResultProcessWithdrawalBatchTuple) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	// Deserialize `Elem0`:
+	err = decoder.Decode(&obj.Elem0)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (_ OperationCommandResultProcessWithdrawalBatchTuple) isOperationCommandResult() {}
@@ -3801,10 +4449,46 @@ type OperationCommandResultUnstakeLSTTuple struct {
 	Elem0 UnstakeLSTCommandResult
 }
 
+func (obj OperationCommandResultUnstakeLSTTuple) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	// Serialize `Elem0` param:
+	err = encoder.Encode(obj.Elem0)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (obj *OperationCommandResultUnstakeLSTTuple) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	// Deserialize `Elem0`:
+	err = decoder.Decode(&obj.Elem0)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (_ OperationCommandResultUnstakeLSTTuple) isOperationCommandResult() {}
 
 type OperationCommandResultStakeSOLTuple struct {
 	Elem0 StakeSOLCommandResult
+}
+
+func (obj OperationCommandResultStakeSOLTuple) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	// Serialize `Elem0` param:
+	err = encoder.Encode(obj.Elem0)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (obj *OperationCommandResultStakeSOLTuple) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	// Deserialize `Elem0`:
+	err = decoder.Decode(&obj.Elem0)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (_ OperationCommandResultStakeSOLTuple) isOperationCommandResult() {}
@@ -3813,10 +4497,46 @@ type OperationCommandResultNormalizeSTTuple struct {
 	Elem0 NormalizeSTCommandResult
 }
 
+func (obj OperationCommandResultNormalizeSTTuple) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	// Serialize `Elem0` param:
+	err = encoder.Encode(obj.Elem0)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (obj *OperationCommandResultNormalizeSTTuple) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	// Deserialize `Elem0`:
+	err = decoder.Decode(&obj.Elem0)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (_ OperationCommandResultNormalizeSTTuple) isOperationCommandResult() {}
 
 type OperationCommandResultRestakeVSTTuple struct {
 	Elem0 RestakeVSTCommandResult
+}
+
+func (obj OperationCommandResultRestakeVSTTuple) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	// Serialize `Elem0` param:
+	err = encoder.Encode(obj.Elem0)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (obj *OperationCommandResultRestakeVSTTuple) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	// Deserialize `Elem0`:
+	err = decoder.Decode(&obj.Elem0)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (_ OperationCommandResultRestakeVSTTuple) isOperationCommandResult() {}
@@ -3825,10 +4545,46 @@ type OperationCommandResultDelegateVSTTuple struct {
 	Elem0 DelegateVSTCommandResult
 }
 
+func (obj OperationCommandResultDelegateVSTTuple) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	// Serialize `Elem0` param:
+	err = encoder.Encode(obj.Elem0)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (obj *OperationCommandResultDelegateVSTTuple) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	// Deserialize `Elem0`:
+	err = decoder.Decode(&obj.Elem0)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (_ OperationCommandResultDelegateVSTTuple) isOperationCommandResult() {}
 
 type OperationCommandResultHarvestRewardTuple struct {
 	Elem0 HarvestRewardCommandResult
+}
+
+func (obj OperationCommandResultHarvestRewardTuple) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	// Serialize `Elem0` param:
+	err = encoder.Encode(obj.Elem0)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (obj *OperationCommandResultHarvestRewardTuple) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	// Deserialize `Elem0`:
+	err = decoder.Decode(&obj.Elem0)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (_ OperationCommandResultHarvestRewardTuple) isOperationCommandResult() {}
@@ -4049,7 +4805,7 @@ type OperatorRanFundCommand struct {
 	FundAccount      ag_solanago.PublicKey
 	NextSequence     uint16
 	NumOperated      uint64
-	Command          OperationCommand
+	Command          *OperationCommand
 	Result           *OperationCommandResult `bin:"optional"`
 }
 
@@ -4075,56 +4831,9 @@ func (obj OperatorRanFundCommand) MarshalWithEncoder(encoder *ag_binary.Encoder)
 		return err
 	}
 	// Serialize `Command` param:
-	{
-		tmp := operationCommandContainer{}
-		switch realvalue := obj.Command.(type) {
-		case *OperationCommandInitializeTuple:
-			tmp.Enum = 0
-			tmp.Initialize = *realvalue
-		case *OperationCommandEnqueueWithdrawalBatchTuple:
-			tmp.Enum = 1
-			tmp.EnqueueWithdrawalBatch = *realvalue
-		case *OperationCommandClaimUnrestakedVSTTuple:
-			tmp.Enum = 2
-			tmp.ClaimUnrestakedVST = *realvalue
-		case *OperationCommandDenormalizeNTTuple:
-			tmp.Enum = 3
-			tmp.DenormalizeNT = *realvalue
-		case *OperationCommandUndelegateVSTTuple:
-			tmp.Enum = 4
-			tmp.UndelegateVST = *realvalue
-		case *OperationCommandUnrestakeVRTTuple:
-			tmp.Enum = 5
-			tmp.UnrestakeVRT = *realvalue
-		case *OperationCommandClaimUnstakedSOLTuple:
-			tmp.Enum = 6
-			tmp.ClaimUnstakedSOL = *realvalue
-		case *OperationCommandProcessWithdrawalBatchTuple:
-			tmp.Enum = 7
-			tmp.ProcessWithdrawalBatch = *realvalue
-		case *OperationCommandUnstakeLSTTuple:
-			tmp.Enum = 8
-			tmp.UnstakeLST = *realvalue
-		case *OperationCommandStakeSOLTuple:
-			tmp.Enum = 9
-			tmp.StakeSOL = *realvalue
-		case *OperationCommandNormalizeSTTuple:
-			tmp.Enum = 10
-			tmp.NormalizeST = *realvalue
-		case *OperationCommandRestakeVSTTuple:
-			tmp.Enum = 11
-			tmp.RestakeVST = *realvalue
-		case *OperationCommandDelegateVSTTuple:
-			tmp.Enum = 12
-			tmp.DelegateVST = *realvalue
-		case *OperationCommandHarvestRewardTuple:
-			tmp.Enum = 13
-			tmp.HarvestReward = *realvalue
-		}
-		err := encoder.Encode(tmp)
-		if err != nil {
-			return err
-		}
+	err = encoder.Encode(obj.Command)
+	if err != nil {
+		return err
 	}
 	// Serialize `Result` param (optional):
 	{
@@ -4134,53 +4843,11 @@ func (obj OperatorRanFundCommand) MarshalWithEncoder(encoder *ag_binary.Encoder)
 				return err
 			}
 		} else {
-			tmp := operationCommandResultContainer{}
-			operationCommandResult := *obj.Result
-			switch realvalue := operationCommandResult.(type) {
-			case *OperationCommandResultInitializeTuple:
-				tmp.Enum = 0
-				tmp.Initialize = *realvalue
-			case *OperationCommandResultEnqueueWithdrawalBatchTuple:
-				tmp.Enum = 1
-				tmp.EnqueueWithdrawalBatch = *realvalue
-			case *OperationCommandResultClaimUnrestakedVSTTuple:
-				tmp.Enum = 2
-				tmp.ClaimUnrestakedVST = *realvalue
-			case *OperationCommandResultDenormalizeNTTuple:
-				tmp.Enum = 3
-				tmp.DenormalizeNT = *realvalue
-			case *OperationCommandResultUndelegateVSTTuple:
-				tmp.Enum = 4
-				tmp.UndelegateVST = *realvalue
-			case *OperationCommandResultUnrestakeVRTTuple:
-				tmp.Enum = 5
-				tmp.UnrestakeVRT = *realvalue
-			case *OperationCommandResultClaimUnstakedSOLTuple:
-				tmp.Enum = 6
-				tmp.ClaimUnstakedSOL = *realvalue
-			case *OperationCommandResultProcessWithdrawalBatchTuple:
-				tmp.Enum = 7
-				tmp.ProcessWithdrawalBatch = *realvalue
-			case *OperationCommandResultUnstakeLSTTuple:
-				tmp.Enum = 8
-				tmp.UnstakeLST = *realvalue
-			case *OperationCommandResultStakeSOLTuple:
-				tmp.Enum = 9
-				tmp.StakeSOL = *realvalue
-			case *OperationCommandResultNormalizeSTTuple:
-				tmp.Enum = 10
-				tmp.NormalizeST = *realvalue
-			case *OperationCommandResultRestakeVSTTuple:
-				tmp.Enum = 11
-				tmp.RestakeVST = *realvalue
-			case *OperationCommandResultDelegateVSTTuple:
-				tmp.Enum = 12
-				tmp.DelegateVST = *realvalue
-			case *OperationCommandResultHarvestRewardTuple:
-				tmp.Enum = 13
-				tmp.HarvestReward = *realvalue
+			err = encoder.WriteBool(true)
+			if err != nil {
+				return err
 			}
-			err := encoder.Encode(tmp)
+			err = encoder.Encode(obj.Result)
 			if err != nil {
 				return err
 			}
@@ -4211,44 +4878,9 @@ func (obj *OperatorRanFundCommand) UnmarshalWithDecoder(decoder *ag_binary.Decod
 		return err
 	}
 	// Deserialize `Command`:
-	{
-		tmp := new(operationCommandContainer)
-		err := decoder.Decode(tmp)
-		if err != nil {
-			return err
-		}
-		switch tmp.Enum {
-		case 0:
-			obj.Command = &tmp.Initialize
-		case 1:
-			obj.Command = &tmp.EnqueueWithdrawalBatch
-		case 2:
-			obj.Command = &tmp.ClaimUnrestakedVST
-		case 3:
-			obj.Command = &tmp.DenormalizeNT
-		case 4:
-			obj.Command = &tmp.UndelegateVST
-		case 5:
-			obj.Command = &tmp.UnrestakeVRT
-		case 6:
-			obj.Command = &tmp.ClaimUnstakedSOL
-		case 7:
-			obj.Command = &tmp.ProcessWithdrawalBatch
-		case 8:
-			obj.Command = &tmp.UnstakeLST
-		case 9:
-			obj.Command = &tmp.StakeSOL
-		case 10:
-			obj.Command = &tmp.NormalizeST
-		case 11:
-			obj.Command = &tmp.RestakeVST
-		case 12:
-			obj.Command = &tmp.DelegateVST
-		case 13:
-			obj.Command = &tmp.HarvestReward
-		default:
-			return fmt.Errorf("unknown enum index: %v", tmp.Enum)
-		}
+	err = decoder.Decode(&obj.Command)
+	if err != nil {
+		return err
 	}
 	// Deserialize `Result` (optional):
 	{
@@ -4257,58 +4889,9 @@ func (obj *OperatorRanFundCommand) UnmarshalWithDecoder(decoder *ag_binary.Decod
 			return err
 		}
 		if ok {
-			tmp := new(operationCommandResultContainer)
-			err := decoder.Decode(tmp)
+			err = decoder.Decode(&obj.Result)
 			if err != nil {
 				return err
-			}
-			spew.Dump(tmp.Enum)
-			switch tmp.Enum {
-			case 0:
-				var val OperationCommandResult = &tmp.Initialize
-				obj.Result = &val
-			case 1:
-				var val OperationCommandResult = &tmp.EnqueueWithdrawalBatch
-				obj.Result = &val
-			case 2:
-				var val OperationCommandResult = &tmp.ClaimUnrestakedVST
-				obj.Result = &val
-			case 3:
-				var val OperationCommandResult = &tmp.DenormalizeNT
-				obj.Result = &val
-			case 4:
-				var val OperationCommandResult = &tmp.UndelegateVST
-				obj.Result = &val
-			case 5:
-				var val OperationCommandResult = &tmp.UnrestakeVRT
-				obj.Result = &val
-			case 6:
-				var val OperationCommandResult = &tmp.ClaimUnstakedSOL
-				obj.Result = &val
-			case 7:
-				fmt.Println("decode 2")
-				var val OperationCommandResult = &tmp.ProcessWithdrawalBatch
-				obj.Result = &val
-			case 8:
-				var val OperationCommandResult = &tmp.UnstakeLST
-				obj.Result = &val
-			case 9:
-				var val OperationCommandResult = &tmp.StakeSOL
-				obj.Result = &val
-			case 10:
-				var val OperationCommandResult = &tmp.NormalizeST
-				obj.Result = &val
-			case 11:
-				var val OperationCommandResult = &tmp.RestakeVST
-				obj.Result = &val
-			case 12:
-				var val OperationCommandResult = &tmp.DelegateVST
-				obj.Result = &val
-			case 13:
-				var val OperationCommandResult = &tmp.HarvestReward
-				obj.Result = &val
-			default:
-				return fmt.Errorf("unknown enum index: %v", tmp.Enum)
 			}
 		}
 	}
@@ -4415,29 +4998,15 @@ func (obj *OperatorUpdatedRewardPools) UnmarshalWithDecoder(decoder *ag_binary.D
 }
 
 type ProcessWithdrawalBatchCommand struct {
-	State  ProcessWithdrawalBatchCommandState
+	State  *ProcessWithdrawalBatchCommandState
 	Forced bool
 }
 
 func (obj ProcessWithdrawalBatchCommand) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
 	// Serialize `State` param:
-	{
-		tmp := processWithdrawalBatchCommandStateContainer{}
-		switch realvalue := obj.State.(type) {
-		case *ProcessWithdrawalBatchCommandStateNewTuple:
-			tmp.Enum = 0
-			tmp.New = *realvalue
-		case *ProcessWithdrawalBatchCommandStatePrepareTuple:
-			tmp.Enum = 1
-			tmp.Prepare = *realvalue
-		case *ProcessWithdrawalBatchCommandStateExecuteTuple:
-			tmp.Enum = 2
-			tmp.Execute = *realvalue
-		}
-		err := encoder.Encode(tmp)
-		if err != nil {
-			return err
-		}
+	err = encoder.Encode(obj.State)
+	if err != nil {
+		return err
 	}
 	// Serialize `Forced` param:
 	err = encoder.Encode(obj.Forced)
@@ -4449,22 +5018,9 @@ func (obj ProcessWithdrawalBatchCommand) MarshalWithEncoder(encoder *ag_binary.E
 
 func (obj *ProcessWithdrawalBatchCommand) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
 	// Deserialize `State`:
-	{
-		tmp := new(processWithdrawalBatchCommandStateContainer)
-		err := decoder.Decode(tmp)
-		if err != nil {
-			return err
-		}
-		switch tmp.Enum {
-		case 0:
-			obj.State = (*ProcessWithdrawalBatchCommandStateNewTuple)(&tmp.Enum)
-		case 1:
-			obj.State = &tmp.Prepare
-		case 2:
-			obj.State = &tmp.Execute
-		default:
-			return fmt.Errorf("unknown enum index: %v", tmp.Enum)
-		}
+	err = decoder.Decode(&obj.State)
+	if err != nil {
+		return err
 	}
 	// Deserialize `Forced`:
 	err = decoder.Decode(&obj.Forced)
@@ -4659,7 +5215,46 @@ func (obj *ProcessWithdrawalBatchCommandResultAssetReceivable) UnmarshalWithDeco
 	return nil
 }
 
-type ProcessWithdrawalBatchCommandState interface {
+type ProcessWithdrawalBatchCommandState struct {
+	Value processWithdrawalBatchCommandState
+}
+
+func (obj ProcessWithdrawalBatchCommandState) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	tmp := processWithdrawalBatchCommandStateContainer{}
+	switch realvalue := obj.Value.(type) {
+	case ProcessWithdrawalBatchCommandStateNewTuple:
+		tmp.Enum = 0
+		tmp.New = realvalue
+	case ProcessWithdrawalBatchCommandStatePrepareTuple:
+		tmp.Enum = 1
+		tmp.Prepare = realvalue
+	case ProcessWithdrawalBatchCommandStateExecuteTuple:
+		tmp.Enum = 2
+		tmp.Execute = realvalue
+	}
+	return encoder.Encode(tmp)
+}
+
+func (obj *ProcessWithdrawalBatchCommandState) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	tmp := new(processWithdrawalBatchCommandStateContainer)
+	err = decoder.Decode(tmp)
+	if err != nil {
+		return err
+	}
+	switch tmp.Enum {
+	case 0:
+		obj.Value = tmp.New
+	case 1:
+		obj.Value = tmp.Prepare
+	case 2:
+		obj.Value = tmp.Execute
+	default:
+		return fmt.Errorf("unknown enum index: %v", tmp.Enum)
+	}
+	return nil
+}
+
+type processWithdrawalBatchCommandState interface {
 	isProcessWithdrawalBatchCommandState()
 }
 
@@ -4795,50 +5390,23 @@ func (obj *ProcessWithdrawalBatchCommandStateExecuteTuple) UnmarshalWithDecoder(
 func (_ ProcessWithdrawalBatchCommandStateExecuteTuple) isProcessWithdrawalBatchCommandState() {}
 
 type RestakeVSTCommand struct {
-	State RestakeVSTCommandState
+	State *RestakeVSTCommandState
 }
 
 func (obj RestakeVSTCommand) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
 	// Serialize `State` param:
-	{
-		tmp := restakeVSTCommandStateContainer{}
-		switch realvalue := obj.State.(type) {
-		case *RestakeVSTCommandStateNewTuple:
-			tmp.Enum = 0
-			tmp.New = *realvalue
-		case *RestakeVSTCommandStatePrepareTuple:
-			tmp.Enum = 1
-			tmp.Prepare = *realvalue
-		case *RestakeVSTCommandStateExecuteTuple:
-			tmp.Enum = 2
-			tmp.Execute = *realvalue
-		}
-		err := encoder.Encode(tmp)
-		if err != nil {
-			return err
-		}
+	err = encoder.Encode(obj.State)
+	if err != nil {
+		return err
 	}
 	return nil
 }
 
 func (obj *RestakeVSTCommand) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
 	// Deserialize `State`:
-	{
-		tmp := new(restakeVSTCommandStateContainer)
-		err := decoder.Decode(tmp)
-		if err != nil {
-			return err
-		}
-		switch tmp.Enum {
-		case 0:
-			obj.State = (*RestakeVSTCommandStateNewTuple)(&tmp.Enum)
-		case 1:
-			obj.State = &tmp.Prepare
-		case 2:
-			obj.State = &tmp.Execute
-		default:
-			return fmt.Errorf("unknown enum index: %v", tmp.Enum)
-		}
+	err = decoder.Decode(&obj.State)
+	if err != nil {
+		return err
 	}
 	return nil
 }
@@ -4953,7 +5521,46 @@ func (obj *RestakeVSTCommandResult) UnmarshalWithDecoder(decoder *ag_binary.Deco
 	return nil
 }
 
-type RestakeVSTCommandState interface {
+type RestakeVSTCommandState struct {
+	Value restakeVSTCommandState
+}
+
+func (obj RestakeVSTCommandState) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	tmp := restakeVSTCommandStateContainer{}
+	switch realvalue := obj.Value.(type) {
+	case RestakeVSTCommandStateNewTuple:
+		tmp.Enum = 0
+		tmp.New = realvalue
+	case RestakeVSTCommandStatePrepareTuple:
+		tmp.Enum = 1
+		tmp.Prepare = realvalue
+	case RestakeVSTCommandStateExecuteTuple:
+		tmp.Enum = 2
+		tmp.Execute = realvalue
+	}
+	return encoder.Encode(tmp)
+}
+
+func (obj *RestakeVSTCommandState) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	tmp := new(restakeVSTCommandStateContainer)
+	err = decoder.Decode(tmp)
+	if err != nil {
+		return err
+	}
+	switch tmp.Enum {
+	case 0:
+		obj.Value = tmp.New
+	case 1:
+		obj.Value = tmp.Prepare
+	case 2:
+		obj.Value = tmp.Execute
+	default:
+		return fmt.Errorf("unknown enum index: %v", tmp.Enum)
+	}
+	return nil
+}
+
+type restakeVSTCommandState interface {
 	isRestakeVSTCommandState()
 }
 
@@ -6101,7 +6708,46 @@ func (obj *RewardSettlementBlock) UnmarshalWithDecoder(decoder *ag_binary.Decode
 	return nil
 }
 
-type RewardType interface {
+type RewardType struct {
+	Value rewardType
+}
+
+func (obj RewardType) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	tmp := rewardTypeContainer{}
+	switch realvalue := obj.Value.(type) {
+	case RewardTypePointTuple:
+		tmp.Enum = 0
+		tmp.Point = realvalue
+	case RewardTypeTokenTuple:
+		tmp.Enum = 1
+		tmp.Token = realvalue
+	case RewardTypeSOLTuple:
+		tmp.Enum = 2
+		tmp.SOL = realvalue
+	}
+	return encoder.Encode(tmp)
+}
+
+func (obj *RewardType) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	tmp := new(rewardTypeContainer)
+	err = decoder.Decode(tmp)
+	if err != nil {
+		return err
+	}
+	switch tmp.Enum {
+	case 0:
+		obj.Value = tmp.Point
+	case 1:
+		obj.Value = tmp.Token
+	case 2:
+		obj.Value = tmp.SOL
+	default:
+		return fmt.Errorf("unknown enum index: %v", tmp.Enum)
+	}
+	return nil
+}
+
+type rewardType interface {
 	isRewardType()
 }
 
@@ -6195,50 +6841,23 @@ func (obj *RewardTypeSOLTuple) UnmarshalWithDecoder(decoder *ag_binary.Decoder) 
 func (_ RewardTypeSOLTuple) isRewardType() {}
 
 type StakeSOLCommand struct {
-	State StakeSOLCommandState
+	State *StakeSOLCommandState
 }
 
 func (obj StakeSOLCommand) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
 	// Serialize `State` param:
-	{
-		tmp := stakeSOLCommandStateContainer{}
-		switch realvalue := obj.State.(type) {
-		case *StakeSOLCommandStateNewTuple:
-			tmp.Enum = 0
-			tmp.New = *realvalue
-		case *StakeSOLCommandStatePrepareTuple:
-			tmp.Enum = 1
-			tmp.Prepare = *realvalue
-		case *StakeSOLCommandStateExecuteTuple:
-			tmp.Enum = 2
-			tmp.Execute = *realvalue
-		}
-		err := encoder.Encode(tmp)
-		if err != nil {
-			return err
-		}
+	err = encoder.Encode(obj.State)
+	if err != nil {
+		return err
 	}
 	return nil
 }
 
 func (obj *StakeSOLCommand) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
 	// Deserialize `State`:
-	{
-		tmp := new(stakeSOLCommandStateContainer)
-		err := decoder.Decode(tmp)
-		if err != nil {
-			return err
-		}
-		switch tmp.Enum {
-		case 0:
-			obj.State = (*StakeSOLCommandStateNewTuple)(&tmp.Enum)
-		case 1:
-			obj.State = &tmp.Prepare
-		case 2:
-			obj.State = &tmp.Execute
-		default:
-			return fmt.Errorf("unknown enum index: %v", tmp.Enum)
-		}
+	err = decoder.Decode(&obj.State)
+	if err != nil {
+		return err
 	}
 	return nil
 }
@@ -6364,7 +6983,46 @@ func (obj *StakeSOLCommandResult) UnmarshalWithDecoder(decoder *ag_binary.Decode
 	return nil
 }
 
-type StakeSOLCommandState interface {
+type StakeSOLCommandState struct {
+	Value stakeSOLCommandState
+}
+
+func (obj StakeSOLCommandState) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	tmp := stakeSOLCommandStateContainer{}
+	switch realvalue := obj.Value.(type) {
+	case StakeSOLCommandStateNewTuple:
+		tmp.Enum = 0
+		tmp.New = realvalue
+	case StakeSOLCommandStatePrepareTuple:
+		tmp.Enum = 1
+		tmp.Prepare = realvalue
+	case StakeSOLCommandStateExecuteTuple:
+		tmp.Enum = 2
+		tmp.Execute = realvalue
+	}
+	return encoder.Encode(tmp)
+}
+
+func (obj *StakeSOLCommandState) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	tmp := new(stakeSOLCommandStateContainer)
+	err = decoder.Decode(tmp)
+	if err != nil {
+		return err
+	}
+	switch tmp.Enum {
+	case 0:
+		obj.Value = tmp.New
+	case 1:
+		obj.Value = tmp.Prepare
+	case 2:
+		obj.Value = tmp.Execute
+	default:
+		return fmt.Errorf("unknown enum index: %v", tmp.Enum)
+	}
+	return nil
+}
+
+type stakeSOLCommandState interface {
 	isStakeSOLCommandState()
 }
 
@@ -6701,7 +7359,66 @@ func (obj *TokenAllocatedAmountRecord) UnmarshalWithDecoder(decoder *ag_binary.D
 	return nil
 }
 
-type TokenPricingSource interface {
+type TokenPricingSource struct {
+	Value tokenPricingSource
+}
+
+func (obj TokenPricingSource) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	tmp := tokenPricingSourceContainer{}
+	switch realvalue := obj.Value.(type) {
+	case TokenPricingSourceSPLStakePoolTuple:
+		tmp.Enum = 0
+		tmp.SPLStakePool = realvalue
+	case TokenPricingSourceMarinadeStakePoolTuple:
+		tmp.Enum = 1
+		tmp.MarinadeStakePool = realvalue
+	case TokenPricingSourceJitoRestakingVaultTuple:
+		tmp.Enum = 2
+		tmp.JitoRestakingVault = realvalue
+	case TokenPricingSourceFragmetricNormalizedTokenPoolTuple:
+		tmp.Enum = 3
+		tmp.FragmetricNormalizedTokenPool = realvalue
+	case TokenPricingSourceFragmetricRestakingFundTuple:
+		tmp.Enum = 4
+		tmp.FragmetricRestakingFund = realvalue
+	case TokenPricingSourceOrcaDEXLiquidityPoolTuple:
+		tmp.Enum = 5
+		tmp.OrcaDEXLiquidityPool = realvalue
+	case TokenPricingSourceSanctumSingleValidatorSPLStakePoolTuple:
+		tmp.Enum = 6
+		tmp.SanctumSingleValidatorSPLStakePool = realvalue
+	}
+	return encoder.Encode(tmp)
+}
+
+func (obj *TokenPricingSource) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	tmp := new(tokenPricingSourceContainer)
+	err = decoder.Decode(tmp)
+	if err != nil {
+		return err
+	}
+	switch tmp.Enum {
+	case 0:
+		obj.Value = tmp.SPLStakePool
+	case 1:
+		obj.Value = tmp.MarinadeStakePool
+	case 2:
+		obj.Value = tmp.JitoRestakingVault
+	case 3:
+		obj.Value = tmp.FragmetricNormalizedTokenPool
+	case 4:
+		obj.Value = tmp.FragmetricRestakingFund
+	case 5:
+		obj.Value = tmp.OrcaDEXLiquidityPool
+	case 6:
+		obj.Value = tmp.SanctumSingleValidatorSPLStakePool
+	default:
+		return fmt.Errorf("unknown enum index: %v", tmp.Enum)
+	}
+	return nil
+}
+
+type tokenPricingSource interface {
 	isTokenPricingSource()
 }
 
@@ -7026,50 +7743,23 @@ func (obj *UndelegateVSTCommandResult) UnmarshalWithDecoder(decoder *ag_binary.D
 }
 
 type UnrestakeVRTCommand struct {
-	State UnrestakeVRTCommandState
+	State *UnrestakeVRTCommandState
 }
 
 func (obj UnrestakeVRTCommand) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
 	// Serialize `State` param:
-	{
-		tmp := unrestakeVRTCommandStateContainer{}
-		switch realvalue := obj.State.(type) {
-		case *UnrestakeVRTCommandStateNewTuple:
-			tmp.Enum = 0
-			tmp.New = *realvalue
-		case *UnrestakeVRTCommandStatePrepareTuple:
-			tmp.Enum = 1
-			tmp.Prepare = *realvalue
-		case *UnrestakeVRTCommandStateExecuteTuple:
-			tmp.Enum = 2
-			tmp.Execute = *realvalue
-		}
-		err := encoder.Encode(tmp)
-		if err != nil {
-			return err
-		}
+	err = encoder.Encode(obj.State)
+	if err != nil {
+		return err
 	}
 	return nil
 }
 
 func (obj *UnrestakeVRTCommand) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
 	// Deserialize `State`:
-	{
-		tmp := new(unrestakeVRTCommandStateContainer)
-		err := decoder.Decode(tmp)
-		if err != nil {
-			return err
-		}
-		switch tmp.Enum {
-		case 0:
-			obj.State = (*UnrestakeVRTCommandStateNewTuple)(&tmp.Enum)
-		case 1:
-			obj.State = &tmp.Prepare
-		case 2:
-			obj.State = &tmp.Execute
-		default:
-			return fmt.Errorf("unknown enum index: %v", tmp.Enum)
-		}
+	err = decoder.Decode(&obj.State)
+	if err != nil {
+		return err
 	}
 	return nil
 }
@@ -7140,7 +7830,46 @@ func (obj *UnrestakeVRTCommandResult) UnmarshalWithDecoder(decoder *ag_binary.De
 	return nil
 }
 
-type UnrestakeVRTCommandState interface {
+type UnrestakeVRTCommandState struct {
+	Value unrestakeVRTCommandState
+}
+
+func (obj UnrestakeVRTCommandState) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	tmp := unrestakeVRTCommandStateContainer{}
+	switch realvalue := obj.Value.(type) {
+	case UnrestakeVRTCommandStateNewTuple:
+		tmp.Enum = 0
+		tmp.New = realvalue
+	case UnrestakeVRTCommandStatePrepareTuple:
+		tmp.Enum = 1
+		tmp.Prepare = realvalue
+	case UnrestakeVRTCommandStateExecuteTuple:
+		tmp.Enum = 2
+		tmp.Execute = realvalue
+	}
+	return encoder.Encode(tmp)
+}
+
+func (obj *UnrestakeVRTCommandState) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	tmp := new(unrestakeVRTCommandStateContainer)
+	err = decoder.Decode(tmp)
+	if err != nil {
+		return err
+	}
+	switch tmp.Enum {
+	case 0:
+		obj.Value = tmp.New
+	case 1:
+		obj.Value = tmp.Prepare
+	case 2:
+		obj.Value = tmp.Execute
+	default:
+		return fmt.Errorf("unknown enum index: %v", tmp.Enum)
+	}
+	return nil
+}
+
+type unrestakeVRTCommandState interface {
 	isUnrestakeVRTCommandState()
 }
 
@@ -7267,55 +7996,23 @@ func (obj *UnrestakeVSTCommandItem) UnmarshalWithDecoder(decoder *ag_binary.Deco
 }
 
 type UnstakeLSTCommand struct {
-	State UnstakeLSTCommandState
+	State *UnstakeLSTCommandState
 }
 
 func (obj UnstakeLSTCommand) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
 	// Serialize `State` param:
-	{
-		tmp := unstakeLSTCommandStateContainer{}
-		switch realvalue := obj.State.(type) {
-		case *UnstakeLSTCommandStateNewTuple:
-			tmp.Enum = 0
-			tmp.New = *realvalue
-		case *UnstakeLSTCommandStatePrepareTuple:
-			tmp.Enum = 1
-			tmp.Prepare = *realvalue
-		case *UnstakeLSTCommandStateGetWithdrawStakeItemsTuple:
-			tmp.Enum = 2
-			tmp.GetWithdrawStakeItems = *realvalue
-		case *UnstakeLSTCommandStateExecuteTuple:
-			tmp.Enum = 3
-			tmp.Execute = *realvalue
-		}
-		err := encoder.Encode(tmp)
-		if err != nil {
-			return err
-		}
+	err = encoder.Encode(obj.State)
+	if err != nil {
+		return err
 	}
 	return nil
 }
 
 func (obj *UnstakeLSTCommand) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
 	// Deserialize `State`:
-	{
-		tmp := new(unstakeLSTCommandStateContainer)
-		err := decoder.Decode(tmp)
-		if err != nil {
-			return err
-		}
-		switch tmp.Enum {
-		case 0:
-			obj.State = (*UnstakeLSTCommandStateNewTuple)(&tmp.Enum)
-		case 1:
-			obj.State = &tmp.Prepare
-		case 2:
-			obj.State = &tmp.GetWithdrawStakeItems
-		case 3:
-			obj.State = &tmp.Execute
-		default:
-			return fmt.Errorf("unknown enum index: %v", tmp.Enum)
-		}
+	err = decoder.Decode(&obj.State)
+	if err != nil {
+		return err
 	}
 	return nil
 }
@@ -7463,7 +8160,51 @@ func (obj *UnstakeLSTCommandResult) UnmarshalWithDecoder(decoder *ag_binary.Deco
 	return nil
 }
 
-type UnstakeLSTCommandState interface {
+type UnstakeLSTCommandState struct {
+	Value unstakeLSTCommandState
+}
+
+func (obj UnstakeLSTCommandState) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	tmp := unstakeLSTCommandStateContainer{}
+	switch realvalue := obj.Value.(type) {
+	case UnstakeLSTCommandStateNewTuple:
+		tmp.Enum = 0
+		tmp.New = realvalue
+	case UnstakeLSTCommandStatePrepareTuple:
+		tmp.Enum = 1
+		tmp.Prepare = realvalue
+	case UnstakeLSTCommandStateGetWithdrawStakeItemsTuple:
+		tmp.Enum = 2
+		tmp.GetWithdrawStakeItems = realvalue
+	case UnstakeLSTCommandStateExecuteTuple:
+		tmp.Enum = 3
+		tmp.Execute = realvalue
+	}
+	return encoder.Encode(tmp)
+}
+
+func (obj *UnstakeLSTCommandState) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	tmp := new(unstakeLSTCommandStateContainer)
+	err = decoder.Decode(tmp)
+	if err != nil {
+		return err
+	}
+	switch tmp.Enum {
+	case 0:
+		obj.Value = tmp.New
+	case 1:
+		obj.Value = tmp.Prepare
+	case 2:
+		obj.Value = tmp.GetWithdrawStakeItems
+	case 3:
+		obj.Value = tmp.Execute
+	default:
+		return fmt.Errorf("unknown enum index: %v", tmp.Enum)
+	}
+	return nil
+}
+
+type unstakeLSTCommandState interface {
 	isUnstakeLSTCommandState()
 }
 

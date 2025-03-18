@@ -6,10 +6,28 @@ import (
 	"strings"
 )
 
-func isAnyFieldComplexEnum(envelopes ...IdlField) bool {
+func isInsFieldComplexEnum(envelopes ...IdlField) bool {
 	for _, v := range envelopes {
 		if isComplexEnum(v.Type) {
 			return true
+		}
+	}
+	return false
+}
+
+func isInsDeepFieldComplexEnum(idl IDL, envelopes ...IdlField) bool {
+	for _, v := range envelopes {
+		definedTypeName := v.Type.GetDefinedFieldName()
+		if definedTypeName != nil {
+			derivedType := idl.Types.GetByName(*definedTypeName).Type
+			if derivedType.Fields != nil {
+				for _, field := range *derivedType.Fields {
+					if isComplexEnum(field.Type) {
+						return true
+					}
+				}
+			}
+
 		}
 	}
 	return false
@@ -118,8 +136,12 @@ func genTestingFuncs(idl IDL) ([]*FileWrapper, error) {
 							DoGroup(func(fnGroup *Group) {
 								fnGroup.Func().Params(Id("t").Op("*").Qual("testing", "T")).Block(
 									BlockFunc(func(tFunGroup *Group) {
-										if isAnyFieldComplexEnum(instruction.Args...) {
+
+										if isInsFieldComplexEnum(instruction.Args...) {
 											genTestWithComplexEnum(tFunGroup, insExportedName, instruction, idl)
+											// TODO: need to add genTest for struct field that include complex enum fields
+											//} else if isInsDeepFieldComplexEnum(idl, instruction.Args...) {
+											// genTestWithDeepComplexEnum(tFunGroup, insExportedName, instruction, idl)
 										} else {
 											genTestNOComplexEnum(tFunGroup, insExportedName, instruction)
 										}
@@ -182,7 +204,7 @@ func genTestWithComplexEnum(tFunGroup *Group, insExportedName string, instructio
 					variantBlock.Id("params").Dot("AccountMetaSlice").Op("=").Nil()
 					variantBlock.Id("tmp").Op(":=").New(Id(formatComplexEnumVariantTypeName(enumName, variant.Name)))
 					variantBlock.Id("fu").Dot("Fuzz").Call(Id("tmp"))
-					variantBlock.Id("params").Dot("Set" + exportedArgName).Call(Id("tmp"))
+					variantBlock.Id("params").Dot("Set" + exportedArgName).Call(Id(enumName).Op("{").Op("*").Id("tmp").Op("}"))
 
 					variantBlock.Id("buf").Op(":=").New(Qual("bytes", "Buffer"))
 					variantBlock.Id("err").Op(":=").Id("encodeT").Call(Op("*").Id("params"), Id("buf"))

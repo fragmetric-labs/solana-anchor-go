@@ -248,7 +248,7 @@ type OperatorRanFundCommandEventData struct {
 	FundAccount      ag_solanago.PublicKey
 	NextSequence     uint16
 	NumOperated      uint64
-	Command          OperationCommand
+	Command          *OperationCommand
 	Result           *OperationCommandResult `bin:"optional"`
 }
 
@@ -281,56 +281,9 @@ func (obj OperatorRanFundCommandEventData) MarshalWithEncoder(encoder *ag_binary
 		return err
 	}
 	// Serialize `Command` param:
-	{
-		tmp := operationCommandContainer{}
-		switch realvalue := obj.Command.(type) {
-		case *OperationCommandInitializeTuple:
-			tmp.Enum = 0
-			tmp.Initialize = *realvalue
-		case *OperationCommandEnqueueWithdrawalBatchTuple:
-			tmp.Enum = 1
-			tmp.EnqueueWithdrawalBatch = *realvalue
-		case *OperationCommandClaimUnrestakedVSTTuple:
-			tmp.Enum = 2
-			tmp.ClaimUnrestakedVST = *realvalue
-		case *OperationCommandDenormalizeNTTuple:
-			tmp.Enum = 3
-			tmp.DenormalizeNT = *realvalue
-		case *OperationCommandUndelegateVSTTuple:
-			tmp.Enum = 4
-			tmp.UndelegateVST = *realvalue
-		case *OperationCommandUnrestakeVRTTuple:
-			tmp.Enum = 5
-			tmp.UnrestakeVRT = *realvalue
-		case *OperationCommandClaimUnstakedSOLTuple:
-			tmp.Enum = 6
-			tmp.ClaimUnstakedSOL = *realvalue
-		case *OperationCommandProcessWithdrawalBatchTuple:
-			tmp.Enum = 7
-			tmp.ProcessWithdrawalBatch = *realvalue
-		case *OperationCommandUnstakeLSTTuple:
-			tmp.Enum = 8
-			tmp.UnstakeLST = *realvalue
-		case *OperationCommandStakeSOLTuple:
-			tmp.Enum = 9
-			tmp.StakeSOL = *realvalue
-		case *OperationCommandNormalizeSTTuple:
-			tmp.Enum = 10
-			tmp.NormalizeST = *realvalue
-		case *OperationCommandRestakeVSTTuple:
-			tmp.Enum = 11
-			tmp.RestakeVST = *realvalue
-		case *OperationCommandDelegateVSTTuple:
-			tmp.Enum = 12
-			tmp.DelegateVST = *realvalue
-		case *OperationCommandHarvestRewardTuple:
-			tmp.Enum = 13
-			tmp.HarvestReward = *realvalue
-		}
-		err := encoder.Encode(tmp)
-		if err != nil {
-			return err
-		}
+	err = encoder.Encode(obj.Command)
+	if err != nil {
+		return err
 	}
 	// Serialize `Result` param (optional):
 	{
@@ -340,53 +293,11 @@ func (obj OperatorRanFundCommandEventData) MarshalWithEncoder(encoder *ag_binary
 				return err
 			}
 		} else {
-			tmp := operationCommandResultContainer{}
-			operationCommandResult := *obj.Result
-			switch realvalue := operationCommandResult.(type) {
-			case *OperationCommandResultInitializeTuple:
-				tmp.Enum = 0
-				tmp.Initialize = *realvalue
-			case *OperationCommandResultEnqueueWithdrawalBatchTuple:
-				tmp.Enum = 1
-				tmp.EnqueueWithdrawalBatch = *realvalue
-			case *OperationCommandResultClaimUnrestakedVSTTuple:
-				tmp.Enum = 2
-				tmp.ClaimUnrestakedVST = *realvalue
-			case *OperationCommandResultDenormalizeNTTuple:
-				tmp.Enum = 3
-				tmp.DenormalizeNT = *realvalue
-			case *OperationCommandResultUndelegateVSTTuple:
-				tmp.Enum = 4
-				tmp.UndelegateVST = *realvalue
-			case *OperationCommandResultUnrestakeVRTTuple:
-				tmp.Enum = 5
-				tmp.UnrestakeVRT = *realvalue
-			case *OperationCommandResultClaimUnstakedSOLTuple:
-				tmp.Enum = 6
-				tmp.ClaimUnstakedSOL = *realvalue
-			case *OperationCommandResultProcessWithdrawalBatchTuple:
-				tmp.Enum = 7
-				tmp.ProcessWithdrawalBatch = *realvalue
-			case *OperationCommandResultUnstakeLSTTuple:
-				tmp.Enum = 8
-				tmp.UnstakeLST = *realvalue
-			case *OperationCommandResultStakeSOLTuple:
-				tmp.Enum = 9
-				tmp.StakeSOL = *realvalue
-			case *OperationCommandResultNormalizeSTTuple:
-				tmp.Enum = 10
-				tmp.NormalizeST = *realvalue
-			case *OperationCommandResultRestakeVSTTuple:
-				tmp.Enum = 11
-				tmp.RestakeVST = *realvalue
-			case *OperationCommandResultDelegateVSTTuple:
-				tmp.Enum = 12
-				tmp.DelegateVST = *realvalue
-			case *OperationCommandResultHarvestRewardTuple:
-				tmp.Enum = 13
-				tmp.HarvestReward = *realvalue
+			err = encoder.WriteBool(true)
+			if err != nil {
+				return err
 			}
-			err := encoder.Encode(tmp)
+			err = encoder.Encode(obj.Result)
 			if err != nil {
 				return err
 			}
@@ -430,44 +341,9 @@ func (obj *OperatorRanFundCommandEventData) UnmarshalWithDecoder(decoder *ag_bin
 		return err
 	}
 	// Deserialize `Command`:
-	{
-		tmp := new(operationCommandContainer)
-		err := decoder.Decode(tmp)
-		if err != nil {
-			return err
-		}
-		switch tmp.Enum {
-		case 0:
-			obj.Command = &tmp.Initialize
-		case 1:
-			obj.Command = &tmp.EnqueueWithdrawalBatch
-		case 2:
-			obj.Command = &tmp.ClaimUnrestakedVST
-		case 3:
-			obj.Command = &tmp.DenormalizeNT
-		case 4:
-			obj.Command = &tmp.UndelegateVST
-		case 5:
-			obj.Command = &tmp.UnrestakeVRT
-		case 6:
-			obj.Command = &tmp.ClaimUnstakedSOL
-		case 7:
-			obj.Command = &tmp.ProcessWithdrawalBatch
-		case 8:
-			obj.Command = &tmp.UnstakeLST
-		case 9:
-			obj.Command = &tmp.StakeSOL
-		case 10:
-			obj.Command = &tmp.NormalizeST
-		case 11:
-			obj.Command = &tmp.RestakeVST
-		case 12:
-			obj.Command = &tmp.DelegateVST
-		case 13:
-			obj.Command = &tmp.HarvestReward
-		default:
-			return fmt.Errorf("unknown enum index: %v", tmp.Enum)
-		}
+	err = decoder.Decode(&obj.Command)
+	if err != nil {
+		return err
 	}
 	// Deserialize `Result` (optional):
 	{
@@ -476,56 +352,9 @@ func (obj *OperatorRanFundCommandEventData) UnmarshalWithDecoder(decoder *ag_bin
 			return err
 		}
 		if ok {
-			tmp := new(operationCommandResultContainer)
-			err := decoder.Decode(tmp)
+			err = decoder.Decode(&obj.Result)
 			if err != nil {
 				return err
-			}
-			switch tmp.Enum {
-			case 0:
-				var val OperationCommandResult = tmp.Initialize
-				obj.Result = &val
-			case 1:
-				var val OperationCommandResult = tmp.EnqueueWithdrawalBatch
-				obj.Result = &val
-			case 2:
-				var val OperationCommandResult = tmp.ClaimUnrestakedVST
-				obj.Result = &val
-			case 3:
-				var val OperationCommandResult = tmp.DenormalizeNT
-				obj.Result = &val
-			case 4:
-				var val OperationCommandResult = tmp.UndelegateVST
-				obj.Result = &val
-			case 5:
-				var val OperationCommandResult = tmp.UnrestakeVRT
-				obj.Result = &val
-			case 6:
-				var val OperationCommandResult = tmp.ClaimUnstakedSOL
-				obj.Result = &val
-			case 7:
-				var val OperationCommandResult = tmp.ProcessWithdrawalBatch
-				obj.Result = &val
-			case 8:
-				var val OperationCommandResult = tmp.UnstakeLST
-				obj.Result = &val
-			case 9:
-				var val OperationCommandResult = tmp.StakeSOL
-				obj.Result = &val
-			case 10:
-				var val OperationCommandResult = tmp.NormalizeST
-				obj.Result = &val
-			case 11:
-				var val OperationCommandResult = tmp.RestakeVST
-				obj.Result = &val
-			case 12:
-				var val OperationCommandResult = tmp.DelegateVST
-				obj.Result = &val
-			case 13:
-				var val OperationCommandResult = tmp.HarvestReward
-				obj.Result = &val
-			default:
-				return fmt.Errorf("unknown enum index: %v", tmp.Enum)
 			}
 		}
 	}

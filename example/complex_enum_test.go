@@ -21,29 +21,33 @@ func TestComplexEnum(t *testing.T) {
 		FundAccount:      ag_solanago.MustPublicKeyFromBase58("HdZM8mzEH7JAcswjJNgCC8Zmbu97LCzYo4WCSvFkfWKx"),
 		NextSequence:     123,
 		NumOperated:      456,
-		Command: &restaking.OperationCommandProcessWithdrawalBatchTuple{
-			Elem0: restaking.ProcessWithdrawalBatchCommand{
-				State: &restaking.ProcessWithdrawalBatchCommandStateExecuteTuple{
-					AssetTokenMint:       nil,
-					NumProcessingBatches: 1,
-					ReceiptTokenAmount:   12345,
+		Command: &restaking.OperationCommand{
+			Value: restaking.OperationCommandProcessWithdrawalBatchTuple{
+				Elem0: restaking.ProcessWithdrawalBatchCommand{
+					State: &restaking.ProcessWithdrawalBatchCommandState{Value: restaking.ProcessWithdrawalBatchCommandStateExecuteTuple{
+						AssetTokenMint:       nil,
+						NumProcessingBatches: 1,
+						ReceiptTokenAmount:   12345,
+					}},
+					Forced: true,
 				},
-				Forced: true,
 			},
 		},
-		Result: toPtr[restaking.OperationCommandResult](&restaking.OperationCommandResultProcessWithdrawalBatchTuple{
-			Elem0: restaking.ProcessWithdrawalBatchCommandResult{
-				RequestedReceiptTokenAmount:   1,
-				ProcessedReceiptTokenAmount:   2,
-				AssetTokenMint:                nil,
-				RequiredAssetAmount:           3,
-				ReservedAssetUserAmount:       4,
-				DeductedAssetFeeAmount:        5,
-				OffsettedAssetReceivables:     nil,
-				TransferredAssetRevenueAmount: 6,
-				WithdrawalFeeRateBps:          7,
+		Result: &restaking.OperationCommandResult{
+			Value: restaking.OperationCommandResultProcessWithdrawalBatchTuple{
+				Elem0: restaking.ProcessWithdrawalBatchCommandResult{
+					RequestedReceiptTokenAmount:   1,
+					ProcessedReceiptTokenAmount:   2,
+					AssetTokenMint:                nil,
+					RequiredAssetAmount:           3,
+					ReservedAssetUserAmount:       4,
+					DeductedAssetFeeAmount:        5,
+					OffsettedAssetReceivables:     nil,
+					TransferredAssetRevenueAmount: 6,
+					WithdrawalFeeRateBps:          7,
+				},
 			},
-		}),
+		},
 	}
 
 	// encoding
@@ -65,15 +69,21 @@ func TestComplexEnum(t *testing.T) {
 func TestComplexEnum2(t *testing.T) {
 	src := restaking.TokenValue{
 		Numerator: []restaking.Asset{
-			&restaking.AssetSOLTuple{
-				Elem0: 7777,
+			{
+				Value: restaking.AssetSOLTuple{
+					Elem0: 7777,
+				},
 			},
-			&restaking.AssetTokenTuple{
-				Elem0: ag_solanago.MustPublicKeyFromBase58("GPKjBDTNexAsis6zqGnioAzhauvHzs6UzGXKxx37HdkA"),
-				Elem1: toPtr[restaking.TokenPricingSource](&restaking.TokenPricingSourceSPLStakePoolTuple{
-					Address: ag_solanago.MustPublicKeyFromBase58("HdZM8mzEH7JAcswjJNgCC8Zmbu97LCzYo4WCSvFkfWKx"),
-				}),
-				Elem2: 8888,
+			{
+				Value: restaking.AssetTokenTuple{
+					Elem0: ag_solanago.MustPublicKeyFromBase58("GPKjBDTNexAsis6zqGnioAzhauvHzs6UzGXKxx37HdkA"),
+					Elem1: &restaking.TokenPricingSource{
+						Value: restaking.TokenPricingSourceMarinadeStakePoolTuple{
+							Address: ag_solanago.MustPublicKeyFromBase58("HdZM8mzEH7JAcswjJNgCC8Zmbu97LCzYo4WCSvFkfWKx"),
+						},
+					},
+					Elem2: 8888,
+				},
 			},
 		},
 		Denominator: 1234567,
@@ -110,4 +120,39 @@ func TestComplexEnum_DecodeRawEvent(t *testing.T) {
 	}
 	printer.Dump(dst)
 	require.NotEmpty(t, dst.Result, "result is empty .. see: https://explorer.solana.com/tx/48CL5KorgSLNmSSpS2SgZaNPsjKNkC9qoax9bTBPcZ3td57eDdiwDvQ2m1UPzxG6JcjNBqmUMJ8mEqE5eyqmDg7P?cluster=devnet")
+}
+
+func TestOperation_OperationCommandEntry(t *testing.T) {
+	src :=
+		&restaking.OperatorRunFundCommand{
+			ForceResetCommand: &restaking.OperationCommandEntry{
+				Command: &restaking.OperationCommand{
+					Value: restaking.OperationCommandProcessWithdrawalBatchTuple{
+						Elem0: restaking.ProcessWithdrawalBatchCommand{
+							State: &restaking.ProcessWithdrawalBatchCommandState{Value: restaking.ProcessWithdrawalBatchCommandStateExecuteTuple{
+								AssetTokenMint:       nil,
+								NumProcessingBatches: 1,
+								ReceiptTokenAmount:   12345,
+							}},
+							Forced: true,
+						},
+					},
+				},
+				RequiredAccounts: []restaking.OperationCommandAccountMeta{{Pubkey: ag_solanago.MustPublicKeyFromBase58("BSQmsdxYj6JXUFFkoZkkDqA6FFmSbmDEWUgMrQLfC3pj"), IsWritable: true}, {Pubkey: ag_solanago.MustPublicKeyFromBase58("BSQmsdxYj6JXUFFkoZkkDqA6FFmSbmDEWUgMrQLfC3pj"), IsWritable: false}},
+			},
+			AccountMetaSlice: nil,
+		}
+
+	buf := new(bytes.Buffer)
+	require.NoError(t, ag_binary.NewBorshEncoder(buf).Encode(*src), "1")
+
+	dst := &restaking.OperatorRunFundCommand{}
+	require.NoError(t, ag_binary.NewBorshDecoder(buf.Bytes()).Decode(dst), "2")
+
+	printer := spew.ConfigState{
+		Indent:                  " ",
+		DisablePointerAddresses: true,
+		DisableCapacities:       true,
+	}
+	require.Equal(t, printer.Sdump(src), printer.Sdump(dst), "3")
 }
