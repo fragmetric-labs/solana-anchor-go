@@ -2,7 +2,7 @@
   "address": "frag9zfFME5u1SNhUYGa4cXLzMKgZXF3xwZ2Y1KCYTQ",
   "metadata": {
     "name": "restaking",
-    "version": "0.5.0",
+    "version": "0.5.1",
     "spec": "0.1.0",
     "description": "Fragmetric Liquid Restaking Program",
     "repository": "https://github.com/fragmetric-labs/contracts"
@@ -349,10 +349,6 @@
           ]
         },
         {
-          "name": "receipt_token_program",
-          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
-        },
-        {
           "name": "receipt_token_wrap_account",
           "pda": {
             "seeds": [
@@ -361,8 +357,41 @@
                 "path": "fund_wrap_account"
               },
               {
-                "kind": "account",
-                "path": "receipt_token_program"
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  238,
+                  117,
+                  143,
+                  222,
+                  24,
+                  66,
+                  93,
+                  188,
+                  228,
+                  108,
+                  205,
+                  218,
+                  182,
+                  26,
+                  252,
+                  77,
+                  131,
+                  185,
+                  13,
+                  39,
+                  254,
+                  189,
+                  249,
+                  40,
+                  216,
+                  161,
+                  139,
+                  252
+                ]
               },
               {
                 "kind": "account",
@@ -410,7 +439,6 @@
         },
         {
           "name": "fund_account",
-          "writable": true,
           "pda": {
             "seeds": [
               {
@@ -716,20 +744,12 @@
       "accounts": [
         {
           "name": "payer",
-          "writable": true,
           "signer": true
         },
         {
           "name": "admin",
           "signer": true,
           "address": "fragkamrANLvuZYQPcmPsCATQAabkqNGH6gxqqPG3aP"
-        },
-        {
-          "name": "system_program",
-          "address": "11111111111111111111111111111111"
-        },
-        {
-          "name": "receipt_token_mint"
         },
         {
           "name": "fund_account",
@@ -753,32 +773,10 @@
           }
         },
         {
-          "name": "fund_reserve_account",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  102,
-                  117,
-                  110,
-                  100,
-                  95,
-                  114,
-                  101,
-                  115,
-                  101,
-                  114,
-                  118,
-                  101
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "receipt_token_mint"
-              }
-            ]
-          }
+          "name": "receipt_token_mint",
+          "relations": [
+            "fund_account"
+          ]
         },
         {
           "name": "event_authority",
@@ -1099,10 +1097,6 @@
           ]
         },
         {
-          "name": "receipt_token_program",
-          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
-        },
-        {
           "name": "receipt_token_wrap_account",
           "pda": {
             "seeds": [
@@ -1111,8 +1105,41 @@
                 "path": "fund_wrap_account"
               },
               {
-                "kind": "account",
-                "path": "receipt_token_program"
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  238,
+                  117,
+                  143,
+                  222,
+                  24,
+                  66,
+                  93,
+                  188,
+                  228,
+                  108,
+                  205,
+                  218,
+                  182,
+                  26,
+                  252,
+                  77,
+                  131,
+                  185,
+                  13,
+                  39,
+                  254,
+                  189,
+                  249,
+                  40,
+                  216,
+                  161,
+                  139,
+                  252
+                ]
               },
               {
                 "kind": "account",
@@ -1160,7 +1187,6 @@
         },
         {
           "name": "fund_account",
-          "writable": true,
           "pda": {
             "seeds": [
               {
@@ -2280,6 +2306,103 @@
       ]
     },
     {
+      "name": "fund_manager_add_token_swap_strategy",
+      "discriminator": [
+        14,
+        59,
+        222,
+        151,
+        4,
+        112,
+        133,
+        184
+      ],
+      "accounts": [
+        {
+          "name": "fund_manager",
+          "signer": true,
+          "address": "5UpLTLA7Wjqp7qdfjuTtPcUw3aVtbqFA5Mgm34mxPNg2"
+        },
+        {
+          "name": "receipt_token_mint",
+          "relations": [
+            "fund_account"
+          ]
+        },
+        {
+          "name": "fund_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  117,
+                  110,
+                  100
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "receipt_token_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "event_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  95,
+                  95,
+                  101,
+                  118,
+                  101,
+                  110,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": [
+        {
+          "name": "from_token_mint",
+          "type": "pubkey"
+        },
+        {
+          "name": "to_token_mint",
+          "type": "pubkey"
+        },
+        {
+          "name": "swap_source",
+          "type": {
+            "defined": {
+              "name": "TokenSwapSource"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "fund_manager_close_reward_pool",
       "discriminator": [
         159,
@@ -2716,11 +2839,89 @@
           "name": "vault_account"
         },
         {
-          "name": "jito_restaking_program",
-          "address": "RestkWeAVL8fRGgzhfeoqFhsqKRchg6aa1XrcH96z4Q"
+          "name": "operator_account"
         },
         {
-          "name": "vault_operator"
+          "name": "vault_operator_delegation",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116,
+                  95,
+                  111,
+                  112,
+                  101,
+                  114,
+                  97,
+                  116,
+                  111,
+                  114,
+                  95,
+                  100,
+                  101,
+                  108,
+                  101,
+                  103,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "vault_account"
+              },
+              {
+                "kind": "account",
+                "path": "operator_account"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                7,
+                82,
+                151,
+                3,
+                233,
+                209,
+                72,
+                36,
+                13,
+                237,
+                19,
+                215,
+                83,
+                88,
+                206,
+                101,
+                40,
+                120,
+                109,
+                65,
+                221,
+                187,
+                195,
+                114,
+                118,
+                11,
+                178,
+                161,
+                116,
+                80,
+                255,
+                125
+              ]
+            }
+          }
         },
         {
           "name": "event_authority",
@@ -2771,7 +2972,7 @@
       ],
       "accounts": [
         {
-          "name": "admin",
+          "name": "fund_manager",
           "signer": true,
           "address": "5UpLTLA7Wjqp7qdfjuTtPcUw3aVtbqFA5Mgm34mxPNg2"
         },
@@ -2902,7 +3103,6 @@
         },
         {
           "name": "normalized_token_pool_account",
-          "writable": true,
           "pda": {
             "seeds": [
               {
@@ -3016,10 +3216,6 @@
           ]
         },
         {
-          "name": "receipt_token_program",
-          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
-        },
-        {
           "name": "receipt_token_wrap_account",
           "pda": {
             "seeds": [
@@ -3028,8 +3224,41 @@
                 "path": "fund_wrap_account"
               },
               {
-                "kind": "account",
-                "path": "receipt_token_program"
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  238,
+                  117,
+                  143,
+                  222,
+                  24,
+                  66,
+                  93,
+                  188,
+                  228,
+                  108,
+                  205,
+                  218,
+                  182,
+                  26,
+                  252,
+                  77,
+                  131,
+                  185,
+                  13,
+                  39,
+                  254,
+                  189,
+                  249,
+                  40,
+                  216,
+                  161,
+                  139,
+                  252
+                ]
               },
               {
                 "kind": "account",
@@ -10274,6 +10503,21 @@
       "code": 6081,
       "name": "FundWrappedTokenNotSetError",
       "msg": "fund: wrapped token is not set"
+    },
+    {
+      "code": 6082,
+      "name": "FundTokenSwapStrategyAlreadyRegistered",
+      "msg": "fund: token swap strategy already registered"
+    },
+    {
+      "code": 6083,
+      "name": "FundExceededMaxTokenSwapStrategiesError",
+      "msg": "fund: exceeded max token swap strategies"
+    },
+    {
+      "code": 6084,
+      "name": "FundTokenSwapStrategyNotFoundError",
+      "msg": "fund: token swap strategy not found"
     }
   ],
   "types": [
@@ -10307,6 +10551,9 @@
     },
     {
       "name": "AssetPod",
+      "docs": [
+        "Pod type of `Asset`"
+      ],
       "serialization": "bytemuck",
       "repr": {
         "kind": "c"
@@ -10762,15 +11009,11 @@
         "kind": "struct",
         "fields": [
           {
-            "name": "vault",
-            "type": "pubkey"
-          },
-          {
             "name": "operator",
             "type": "pubkey"
           },
           {
-            "name": "delegation_amount",
+            "name": "allocated_supported_token_amount",
             "type": "u64"
           }
         ]
@@ -10782,7 +11025,29 @@
         "kind": "struct",
         "fields": [
           {
-            "name": "vault_supported_token_mint",
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "delegations",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "DelegateVSTCommandResultDelegated"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "DelegateVSTCommandResultDelegated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "operator",
             "type": "pubkey"
           },
           {
@@ -10808,13 +11073,9 @@
             "name": "Prepare",
             "fields": [
               {
-                "name": "items",
+                "name": "vaults",
                 "type": {
-                  "vec": {
-                    "defined": {
-                      "name": "DelegateVSTCommandItem"
-                    }
-                  }
+                  "vec": "pubkey"
                 }
               }
             ]
@@ -10822,6 +11083,12 @@
           {
             "name": "Execute",
             "fields": [
+              {
+                "name": "vaults",
+                "type": {
+                  "vec": "pubkey"
+                }
+              },
               {
                 "name": "items",
                 "type": {
@@ -11200,7 +11467,16 @@
                     "name": "RestakingVault"
                   }
                 },
-                30
+                16
+              ]
+            }
+          },
+          {
+            "name": "_padding8",
+            "type": {
+              "array": [
+                "u8",
+                112
               ]
             }
           },
@@ -11228,6 +11504,44 @@
               "defined": {
                 "name": "WrappedToken"
               }
+            }
+          },
+          {
+            "name": "num_token_swap_strategies",
+            "docs": [
+              "which DEX to use for swap between two tokens"
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "_padding9",
+            "type": {
+              "array": [
+                "u8",
+                7
+              ]
+            }
+          },
+          {
+            "name": "token_swap_strategies",
+            "type": {
+              "array": [
+                {
+                  "defined": {
+                    "name": "TokenSwapStrategy"
+                  }
+                },
+                30
+              ]
+            }
+          },
+          {
+            "name": "_reserved",
+            "type": {
+              "array": [
+                "u8",
+                3616
+              ]
             }
           }
         ]
@@ -11352,14 +11666,157 @@
       "name": "HarvestRewardCommand",
       "type": {
         "kind": "struct",
-        "fields": []
+        "fields": [
+          {
+            "name": "state",
+            "type": {
+              "defined": {
+                "name": "HarvestRewardCommandState"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "HarvestRewardCommandItem",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "reward_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "harvest_type",
+            "type": {
+              "defined": {
+                "name": "HarvestType"
+              }
+            }
+          }
+        ]
       }
     },
     {
       "name": "HarvestRewardCommandResult",
       "type": {
         "kind": "struct",
-        "fields": []
+        "fields": [
+          {
+            "name": "reward_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "reward_token_amount",
+            "type": "u64"
+          },
+          {
+            "name": "swapped_token_mint",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "distributed_token_amount",
+            "type": "u64"
+          },
+          {
+            "name": "compounded_token_amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "HarvestRewardCommandState",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "New"
+          },
+          {
+            "name": "Prepare",
+            "fields": [
+              {
+                "name": "vaults",
+                "type": {
+                  "vec": "pubkey"
+                }
+              },
+              {
+                "name": "items",
+                "type": {
+                  "vec": {
+                    "defined": {
+                      "name": "HarvestRewardCommandItem"
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "PrepareSwap",
+            "fields": [
+              {
+                "name": "vaults",
+                "type": {
+                  "vec": "pubkey"
+                }
+              },
+              {
+                "name": "items",
+                "type": {
+                  "vec": {
+                    "defined": {
+                      "name": "HarvestRewardCommandItem"
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "Execute",
+            "fields": [
+              {
+                "name": "vaults",
+                "type": {
+                  "vec": "pubkey"
+                }
+              },
+              {
+                "name": "items",
+                "type": {
+                  "vec": {
+                    "defined": {
+                      "name": "HarvestRewardCommandItem"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "HarvestType",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Swap",
+            "fields": [
+              "pubkey"
+            ]
+          },
+          {
+            "name": "Transfer"
+          }
+        ]
       }
     },
     {
@@ -11379,19 +11836,17 @@
       }
     },
     {
-      "name": "InitializeCommandRestakingVaultUpdateItem",
+      "name": "InitializeCommandRestakingVaultDelegationUpdateItem",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "vault",
+            "name": "operator",
             "type": "pubkey"
           },
           {
-            "name": "delegations_updated_bitmap",
-            "type": {
-              "vec": "bool"
-            }
+            "name": "index",
+            "type": "u64"
           }
         ]
       }
@@ -11474,32 +11929,15 @@
         "kind": "enum",
         "variants": [
           {
-            "name": "New"
-          },
-          {
-            "name": "PrepareSingleRestakingVaultUpdate",
-            "fields": [
-              {
-                "name": "vault",
-                "type": "pubkey"
-              },
-              {
-                "name": "operator",
-                "type": "pubkey"
-              }
-            ]
+            "name": "NewRestakingVaultUpdate"
           },
           {
             "name": "PrepareRestakingVaultUpdate",
             "fields": [
               {
-                "name": "items",
+                "name": "vaults",
                 "type": {
-                  "vec": {
-                    "defined": {
-                      "name": "InitializeCommandRestakingVaultUpdateItem"
-                    }
-                  }
+                  "vec": "pubkey"
                 }
               }
             ]
@@ -11508,11 +11946,20 @@
             "name": "ExecuteRestakingVaultUpdate",
             "fields": [
               {
+                "name": "vaults",
+                "type": {
+                  "vec": "pubkey"
+                }
+              },
+              {
                 "name": "items",
+                "docs": [
+                  "Items could be empty."
+                ],
                 "type": {
                   "vec": {
                     "defined": {
-                      "name": "InitializeCommandRestakingVaultUpdateItem"
+                      "name": "InitializeCommandRestakingVaultDelegationUpdateItem"
                     }
                   }
                 }
@@ -12046,6 +12493,9 @@
     },
     {
       "name": "OperationCommandAccountMetaPod",
+      "docs": [
+        "Pod type of `OperationCommandAccountMeta`"
+      ],
       "serialization": "bytemuck",
       "repr": {
         "kind": "c"
@@ -12101,6 +12551,9 @@
     },
     {
       "name": "OperationCommandEntryPod",
+      "docs": [
+        "Pod type of `Option<OperationCommandEntry>`"
+      ],
       "serialization": "bytemuck",
       "repr": {
         "kind": "c"
@@ -12147,6 +12600,9 @@
     },
     {
       "name": "OperationCommandPod",
+      "docs": [
+        "Pod type of `Option<OperationCommand>`"
+      ],
       "serialization": "bytemuck",
       "repr": {
         "kind": "c"
@@ -12163,7 +12619,7 @@
             "type": {
               "array": [
                 "u8",
-                2535
+                3126
               ]
             }
           }
@@ -12377,7 +12833,7 @@
             "type": {
               "array": [
                 "u8",
-                640
+                49
               ]
             }
           }
@@ -12850,6 +13306,10 @@
             }
           },
           {
+            "name": "reward_commission_rate_bps",
+            "type": "u16"
+          },
+          {
             "name": "_padding3",
             "docs": [
               "auto-compounding"
@@ -12857,7 +13317,7 @@
             "type": {
               "array": [
                 "u8",
-                7
+                5
               ]
             }
           },
@@ -12875,11 +13335,36 @@
             }
           },
           {
+            "name": "_padding4",
+            "docs": [
+              "reward to distribute"
+            ],
+            "type": {
+              "array": [
+                "u8",
+                7
+              ]
+            }
+          },
+          {
+            "name": "num_distributing_reward_tokens",
+            "type": "u8"
+          },
+          {
+            "name": "distributing_reward_token_mints",
+            "type": {
+              "array": [
+                "pubkey",
+                30
+              ]
+            }
+          },
+          {
             "name": "_reserved",
             "type": {
               "array": [
                 "u8",
-                128
+                2296
               ]
             }
           }
@@ -13785,6 +14270,9 @@
     },
     {
       "name": "TokenPricingSourcePod",
+      "docs": [
+        "Pod type of `Option<TokenPricingSource>`"
+      ],
       "serialization": "bytemuck",
       "repr": {
         "kind": "c"
@@ -13808,6 +14296,109 @@
           {
             "name": "address",
             "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "TokenSwapSource",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "OrcaDEXLiquidityPool",
+            "fields": [
+              {
+                "name": "address",
+                "type": "pubkey"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "TokenSwapSourcePod",
+      "docs": [
+        "Pod type of `TokenSwapSource`"
+      ],
+      "serialization": "bytemuck",
+      "repr": {
+        "kind": "c"
+      },
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "discriminant",
+            "type": "u8"
+          },
+          {
+            "name": "_padding",
+            "type": {
+              "array": [
+                "u8",
+                7
+              ]
+            }
+          },
+          {
+            "name": "address",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "TokenSwapStrategy",
+      "docs": [
+        "A strategy to swap `from_token` to `to_token`.",
+        "",
+        "There are two restrictions that will be loosen in the future.",
+        "These restrictions are not checked on-chain, so fund manager",
+        "should carefully configure.",
+        "",
+        "1. Each token can be swapped to at most one type of token.",
+        "In other words, there cannot exist two strategies with same `from_token`.",
+        "In the future, when there are two or more strategies with same `from_token`,",
+        "then swap amount will be distributed among those strategies.",
+        "",
+        "2. Each token must be swapped to one of fund's supported tokens.",
+        "In the future, operation cycle will support multiple-hop swap, for example, A -> B -> C.",
+        "In this case `to_token` need not be one of fund's supported token.",
+        "However, to prevent endless swap, token swap strategies must form DAG(vertex = token, edge = strategy)."
+      ],
+      "serialization": "bytemuck",
+      "repr": {
+        "kind": "c"
+      },
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "from_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "to_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "swap_source",
+            "type": {
+              "defined": {
+                "name": "TokenSwapSourcePod"
+              }
+            }
+          },
+          {
+            "name": "_reserved",
+            "type": {
+              "array": [
+                "u8",
+                128
+              ]
+            }
           }
         ]
       }
@@ -13839,6 +14430,9 @@
     },
     {
       "name": "TokenValuePod",
+      "docs": [
+        "Pod type of `TokenValue`"
+      ],
       "serialization": "bytemuck",
       "repr": {
         "kind": "c"
@@ -13874,14 +14468,121 @@
       "name": "UndelegateVSTCommand",
       "type": {
         "kind": "struct",
-        "fields": []
+        "fields": [
+          {
+            "name": "state",
+            "type": {
+              "defined": {
+                "name": "UndelegateVSTCommandState"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "UndelegateVSTCommandItem",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "operator",
+            "type": "pubkey"
+          },
+          {
+            "name": "allocated_supported_token_amount",
+            "type": "u64"
+          }
+        ]
       }
     },
     {
       "name": "UndelegateVSTCommandResult",
       "type": {
         "kind": "struct",
-        "fields": []
+        "fields": [
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "undelegations",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "UndelegateVSTCommandResultUndelegated"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "UndelegateVSTCommandResultUndelegated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "operator",
+            "type": "pubkey"
+          },
+          {
+            "name": "undelegation_requested_token_amount",
+            "type": "u64"
+          },
+          {
+            "name": "total_delegated_token_amount",
+            "type": "u64"
+          },
+          {
+            "name": "total_undelegating_token_amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "UndelegateVSTCommandState",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "New"
+          },
+          {
+            "name": "Prepare",
+            "fields": [
+              {
+                "name": "vaults",
+                "type": {
+                  "vec": "pubkey"
+                }
+              }
+            ]
+          },
+          {
+            "name": "Execute",
+            "fields": [
+              {
+                "name": "vaults",
+                "type": {
+                  "vec": "pubkey"
+                }
+              },
+              {
+                "name": "items",
+                "type": {
+                  "vec": {
+                    "defined": {
+                      "name": "UndelegateVSTCommandItem"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
       }
     },
     {
@@ -14959,7 +15660,7 @@
             "type": {
               "array": [
                 "u8",
-                64
+                1984
               ]
             }
           }
@@ -15103,10 +15804,11 @@
       "docs": [
         "## Version History",
         "* v15: migrate to new layout including new fields using bytemuck. (150640 ~= 148KB)",
-        "* v16: add wrap_account and wrapped token field. (151328 ~= 148KB)"
+        "* v16: add wrap_account and wrapped token field. (151336 ~= 148KB)",
+        "* v18: add reserved space for 60 pubkeys in wrapped token and swap strategies. (163840 = 160KB)"
       ],
       "type": "u16",
-      "value": "16"
+      "value": "18"
     },
     {
       "name": "FUND_ACCOUNT_OPERATION_COMMAND_EXPIRATION_SECONDS",
@@ -15265,10 +15967,29 @@
       "value": "\"devnet\""
     },
     {
+      "name": "USER_FUND_ACCOUNT_CURRENT_SIZE",
+      "type": "u64",
+      "value": "567"
+    },
+    {
+      "name": "USER_FUND_ACCOUNT_CURRENT_VERSION",
+      "docs": [
+        "## Version History",
+        "* v1: Initial Version (567 ~= 0.55KB)"
+      ],
+      "type": "u16",
+      "value": "1"
+    },
+    {
+      "name": "USER_REWARD_ACCOUNT_CURRENT_SIZE",
+      "type": "u64",
+      "value": "4248"
+    },
+    {
       "name": "USER_REWARD_ACCOUNT_CURRENT_VERSION",
       "docs": [
         "## Version History",
-        "* v_1: Initial Version"
+        "* v1: Initial Version (4248 ~= 4.14KB)"
       ],
       "type": "u16",
       "value": "1"

@@ -13,7 +13,7 @@ import (
 // FundManagerInitializeFundNormalizedToken is the `fund_manager_initialize_fund_normalized_token` instruction.
 type FundManagerInitializeFundNormalizedToken struct {
 
-	// [0] = [SIGNER] admin
+	// [0] = [SIGNER] fund_manager
 	//
 	// [1] = [] system_program
 	//
@@ -29,7 +29,7 @@ type FundManagerInitializeFundNormalizedToken struct {
 	//
 	// [7] = [] fund_normalized_token_reserve_account
 	//
-	// [8] = [WRITE] normalized_token_pool_account
+	// [8] = [] normalized_token_pool_account
 	//
 	// [9] = [] event_authority
 	//
@@ -48,14 +48,14 @@ func NewFundManagerInitializeFundNormalizedTokenInstructionBuilder() *FundManage
 	return nd
 }
 
-// SetAdminAccount sets the "admin" account.
-func (inst *FundManagerInitializeFundNormalizedToken) SetAdminAccount(admin ag_solanago.PublicKey) *FundManagerInitializeFundNormalizedToken {
-	inst.AccountMetaSlice[0] = ag_solanago.Meta(admin).SIGNER()
+// SetFundManagerAccount sets the "fund_manager" account.
+func (inst *FundManagerInitializeFundNormalizedToken) SetFundManagerAccount(fundManager ag_solanago.PublicKey) *FundManagerInitializeFundNormalizedToken {
+	inst.AccountMetaSlice[0] = ag_solanago.Meta(fundManager).SIGNER()
 	return inst
 }
 
-// GetAdminAccount gets the "admin" account.
-func (inst *FundManagerInitializeFundNormalizedToken) GetAdminAccount() *ag_solanago.AccountMeta {
+// GetFundManagerAccount gets the "fund_manager" account.
+func (inst *FundManagerInitializeFundNormalizedToken) GetFundManagerAccount() *ag_solanago.AccountMeta {
 	return inst.AccountMetaSlice.Get(0)
 }
 
@@ -274,7 +274,7 @@ func (inst *FundManagerInitializeFundNormalizedToken) GetFundNormalizedTokenRese
 
 // SetNormalizedTokenPoolAccountAccount sets the "normalized_token_pool_account" account.
 func (inst *FundManagerInitializeFundNormalizedToken) SetNormalizedTokenPoolAccountAccount(normalizedTokenPoolAccount ag_solanago.PublicKey) *FundManagerInitializeFundNormalizedToken {
-	inst.AccountMetaSlice[8] = ag_solanago.Meta(normalizedTokenPoolAccount).WRITE()
+	inst.AccountMetaSlice[8] = ag_solanago.Meta(normalizedTokenPoolAccount)
 	return inst
 }
 
@@ -412,7 +412,7 @@ func (inst *FundManagerInitializeFundNormalizedToken) Validate() error {
 	// Check whether all (required) accounts are set:
 	{
 		if inst.AccountMetaSlice[0] == nil {
-			return errors.New("accounts.Admin is not set")
+			return errors.New("accounts.FundManager is not set")
 		}
 		if inst.AccountMetaSlice[1] == nil {
 			return errors.New("accounts.SystemProgram is not set")
@@ -461,7 +461,7 @@ func (inst *FundManagerInitializeFundNormalizedToken) EncodeToTree(parent ag_tre
 
 					// Accounts of the instruction:
 					instructionBranch.Child("Accounts[len=11]").ParentFunc(func(accountsBranch ag_treeout.Branches) {
-						accountsBranch.Child(ag_format.Meta("                         admin", inst.AccountMetaSlice.Get(0)))
+						accountsBranch.Child(ag_format.Meta("                  fund_manager", inst.AccountMetaSlice.Get(0)))
 						accountsBranch.Child(ag_format.Meta("                system_program", inst.AccountMetaSlice.Get(1)))
 						accountsBranch.Child(ag_format.Meta("                         fund_", inst.AccountMetaSlice.Get(2)))
 						accountsBranch.Child(ag_format.Meta("                 fund_reserve_", inst.AccountMetaSlice.Get(3)))
@@ -487,7 +487,7 @@ func (obj *FundManagerInitializeFundNormalizedToken) UnmarshalWithDecoder(decode
 // NewFundManagerInitializeFundNormalizedTokenInstruction declares a new FundManagerInitializeFundNormalizedToken instruction with the provided parameters and accounts.
 func NewFundManagerInitializeFundNormalizedTokenInstruction(
 	// Accounts:
-	admin ag_solanago.PublicKey,
+	fundManager ag_solanago.PublicKey,
 	systemProgram ag_solanago.PublicKey,
 	fundAccount ag_solanago.PublicKey,
 	fundReserveAccount ag_solanago.PublicKey,
@@ -499,7 +499,7 @@ func NewFundManagerInitializeFundNormalizedTokenInstruction(
 	eventAuthority ag_solanago.PublicKey,
 	program ag_solanago.PublicKey) *FundManagerInitializeFundNormalizedToken {
 	return NewFundManagerInitializeFundNormalizedTokenInstructionBuilder().
-		SetAdminAccount(admin).
+		SetFundManagerAccount(fundManager).
 		SetSystemProgramAccount(systemProgram).
 		SetFundAccountAccount(fundAccount).
 		SetFundReserveAccountAccount(fundReserveAccount).

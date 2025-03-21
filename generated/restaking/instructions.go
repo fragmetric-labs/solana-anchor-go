@@ -62,6 +62,8 @@ var (
 
 	Instruction_FundManagerAddSupportedToken = ag_binary.TypeID([8]byte{0, 137, 153, 52, 179, 163, 4, 20})
 
+	Instruction_FundManagerAddTokenSwapStrategy = ag_binary.TypeID([8]byte{14, 59, 222, 151, 4, 112, 133, 184})
+
 	Instruction_FundManagerCloseRewardPool = ag_binary.TypeID([8]byte{159, 24, 238, 47, 253, 39, 6, 30})
 
 	Instruction_FundManagerInitializeFundJitoRestakingVault = ag_binary.TypeID([8]byte{94, 33, 145, 222, 177, 170, 211, 74})
@@ -174,6 +176,8 @@ func InstructionIDToName(id ag_binary.TypeID) string {
 		return "FundManagerAddRewardPoolHolder"
 	case Instruction_FundManagerAddSupportedToken:
 		return "FundManagerAddSupportedToken"
+	case Instruction_FundManagerAddTokenSwapStrategy:
+		return "FundManagerAddTokenSwapStrategy"
 	case Instruction_FundManagerCloseRewardPool:
 		return "FundManagerCloseRewardPool"
 	case Instruction_FundManagerInitializeFundJitoRestakingVault:
@@ -318,6 +322,9 @@ var InstructionImplDef = ag_binary.NewVariantDefinition(
 		},
 		{
 			Name: "fund_manager_add_supported_token", Type: (*FundManagerAddSupportedToken)(nil),
+		},
+		{
+			Name: "fund_manager_add_token_swap_strategy", Type: (*FundManagerAddTokenSwapStrategy)(nil),
 		},
 		{
 			Name: "fund_manager_close_reward_pool", Type: (*FundManagerCloseRewardPool)(nil),

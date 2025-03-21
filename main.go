@@ -1367,6 +1367,12 @@ func decodeErrorCode(rpcErr error) (errorCode int, ok bool) {
 					panic(fmt.Sprintf("failed to parse constant: %s", spew.Sdump(c)))
 				}
 				code.Lit(int(v))
+			case "u64":
+				v, err := strconv.ParseInt(c.Value, 10, 64)
+				if err != nil {
+					panic(fmt.Sprintf("failed to parse constant: %s", spew.Sdump(c)))
+				}
+				code.Lit(int(v))
 			case "i64":
 				v, err := strconv.ParseInt(c.Value, 10, 64)
 				if err != nil {

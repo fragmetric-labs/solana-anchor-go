@@ -24,30 +24,27 @@ type AdminUpdateFundWrapAccountRewardAccountIfNeeded struct {
 	//
 	// [4] = [] receipt_token_mint
 	//
-	// [5] = [] receipt_token_program
+	// [5] = [] receipt_token_wrap_account
 	//
-	// [6] = [] receipt_token_wrap_account
+	// [6] = [] fund_account
 	//
-	// [7] = [WRITE] fund_account
+	// [7] = [WRITE] reward_account
 	//
-	// [8] = [WRITE] reward_account
+	// [8] = [WRITE] fund_wrap_account_reward_account
 	//
-	// [9] = [WRITE] fund_wrap_account_reward_account
+	// [9] = [] event_authority
 	//
-	// [10] = [] event_authority
-	//
-	// [11] = [] program
+	// [10] = [] program
 	ag_solanago.AccountMetaSlice `bin:"-"`
 }
 
 // NewAdminUpdateFundWrapAccountRewardAccountIfNeededInstructionBuilder creates a new `AdminUpdateFundWrapAccountRewardAccountIfNeeded` instruction builder.
 func NewAdminUpdateFundWrapAccountRewardAccountIfNeededInstructionBuilder() *AdminUpdateFundWrapAccountRewardAccountIfNeeded {
 	nd := &AdminUpdateFundWrapAccountRewardAccountIfNeeded{
-		AccountMetaSlice: make(ag_solanago.AccountMetaSlice, 12),
+		AccountMetaSlice: make(ag_solanago.AccountMetaSlice, 11),
 	}
 	nd.AccountMetaSlice[1] = ag_solanago.Meta(Addresses["fragkamrANLvuZYQPcmPsCATQAabkqNGH6gxqqPG3aP"]).SIGNER()
 	nd.AccountMetaSlice[3] = ag_solanago.Meta(Addresses["11111111111111111111111111111111"])
-	nd.AccountMetaSlice[5] = ag_solanago.Meta(Addresses["TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"])
 	return nd
 }
 
@@ -156,29 +153,18 @@ func (inst *AdminUpdateFundWrapAccountRewardAccountIfNeeded) GetReceiptTokenMint
 	return inst.AccountMetaSlice.Get(4)
 }
 
-// SetReceiptTokenProgramAccount sets the "receipt_token_program" account.
-func (inst *AdminUpdateFundWrapAccountRewardAccountIfNeeded) SetReceiptTokenProgramAccount(receiptTokenProgram ag_solanago.PublicKey) *AdminUpdateFundWrapAccountRewardAccountIfNeeded {
-	inst.AccountMetaSlice[5] = ag_solanago.Meta(receiptTokenProgram)
-	return inst
-}
-
-// GetReceiptTokenProgramAccount gets the "receipt_token_program" account.
-func (inst *AdminUpdateFundWrapAccountRewardAccountIfNeeded) GetReceiptTokenProgramAccount() *ag_solanago.AccountMeta {
-	return inst.AccountMetaSlice.Get(5)
-}
-
 // SetReceiptTokenWrapAccountAccount sets the "receipt_token_wrap_account" account.
 func (inst *AdminUpdateFundWrapAccountRewardAccountIfNeeded) SetReceiptTokenWrapAccountAccount(receiptTokenWrapAccount ag_solanago.PublicKey) *AdminUpdateFundWrapAccountRewardAccountIfNeeded {
-	inst.AccountMetaSlice[6] = ag_solanago.Meta(receiptTokenWrapAccount)
+	inst.AccountMetaSlice[5] = ag_solanago.Meta(receiptTokenWrapAccount)
 	return inst
 }
 
-func (inst *AdminUpdateFundWrapAccountRewardAccountIfNeeded) findFindReceiptTokenWrapAccountAddress(fundWrapAccount ag_solanago.PublicKey, receiptTokenProgram ag_solanago.PublicKey, receiptTokenMint ag_solanago.PublicKey, knownBumpSeed uint8) (pda ag_solanago.PublicKey, bumpSeed uint8, err error) {
+func (inst *AdminUpdateFundWrapAccountRewardAccountIfNeeded) findFindReceiptTokenWrapAccountAddress(fundWrapAccount ag_solanago.PublicKey, receiptTokenMint ag_solanago.PublicKey, knownBumpSeed uint8) (pda ag_solanago.PublicKey, bumpSeed uint8, err error) {
 	var seeds [][]byte
 	// path: fundWrapAccount
 	seeds = append(seeds, fundWrapAccount.Bytes())
-	// path: receiptTokenProgram
-	seeds = append(seeds, receiptTokenProgram.Bytes())
+	// const (raw): [6 221 246 225 238 117 143 222 24 66 93 188 228 108 205 218 182 26 252 77 131 185 13 39 254 189 249 40 216 161 139 252]
+	seeds = append(seeds, []byte{byte(0x6), byte(0xdd), byte(0xf6), byte(0xe1), byte(0xee), byte(0x75), byte(0x8f), byte(0xde), byte(0x18), byte(0x42), byte(0x5d), byte(0xbc), byte(0xe4), byte(0x6c), byte(0xcd), byte(0xda), byte(0xb6), byte(0x1a), byte(0xfc), byte(0x4d), byte(0x83), byte(0xb9), byte(0xd), byte(0x27), byte(0xfe), byte(0xbd), byte(0xf9), byte(0x28), byte(0xd8), byte(0xa1), byte(0x8b), byte(0xfc)})
 	// path: receiptTokenMint
 	seeds = append(seeds, receiptTokenMint.Bytes())
 
@@ -194,13 +180,13 @@ func (inst *AdminUpdateFundWrapAccountRewardAccountIfNeeded) findFindReceiptToke
 }
 
 // FindReceiptTokenWrapAccountAddressWithBumpSeed calculates ReceiptTokenWrapAccount account address with given seeds and a known bump seed.
-func (inst *AdminUpdateFundWrapAccountRewardAccountIfNeeded) FindReceiptTokenWrapAccountAddressWithBumpSeed(fundWrapAccount ag_solanago.PublicKey, receiptTokenProgram ag_solanago.PublicKey, receiptTokenMint ag_solanago.PublicKey, bumpSeed uint8) (pda ag_solanago.PublicKey, err error) {
-	pda, _, err = inst.findFindReceiptTokenWrapAccountAddress(fundWrapAccount, receiptTokenProgram, receiptTokenMint, bumpSeed)
+func (inst *AdminUpdateFundWrapAccountRewardAccountIfNeeded) FindReceiptTokenWrapAccountAddressWithBumpSeed(fundWrapAccount ag_solanago.PublicKey, receiptTokenMint ag_solanago.PublicKey, bumpSeed uint8) (pda ag_solanago.PublicKey, err error) {
+	pda, _, err = inst.findFindReceiptTokenWrapAccountAddress(fundWrapAccount, receiptTokenMint, bumpSeed)
 	return
 }
 
-func (inst *AdminUpdateFundWrapAccountRewardAccountIfNeeded) MustFindReceiptTokenWrapAccountAddressWithBumpSeed(fundWrapAccount ag_solanago.PublicKey, receiptTokenProgram ag_solanago.PublicKey, receiptTokenMint ag_solanago.PublicKey, bumpSeed uint8) (pda ag_solanago.PublicKey) {
-	pda, _, err := inst.findFindReceiptTokenWrapAccountAddress(fundWrapAccount, receiptTokenProgram, receiptTokenMint, bumpSeed)
+func (inst *AdminUpdateFundWrapAccountRewardAccountIfNeeded) MustFindReceiptTokenWrapAccountAddressWithBumpSeed(fundWrapAccount ag_solanago.PublicKey, receiptTokenMint ag_solanago.PublicKey, bumpSeed uint8) (pda ag_solanago.PublicKey) {
+	pda, _, err := inst.findFindReceiptTokenWrapAccountAddress(fundWrapAccount, receiptTokenMint, bumpSeed)
 	if err != nil {
 		panic(err)
 	}
@@ -208,13 +194,13 @@ func (inst *AdminUpdateFundWrapAccountRewardAccountIfNeeded) MustFindReceiptToke
 }
 
 // FindReceiptTokenWrapAccountAddress finds ReceiptTokenWrapAccount account address with given seeds.
-func (inst *AdminUpdateFundWrapAccountRewardAccountIfNeeded) FindReceiptTokenWrapAccountAddress(fundWrapAccount ag_solanago.PublicKey, receiptTokenProgram ag_solanago.PublicKey, receiptTokenMint ag_solanago.PublicKey) (pda ag_solanago.PublicKey, bumpSeed uint8, err error) {
-	pda, bumpSeed, err = inst.findFindReceiptTokenWrapAccountAddress(fundWrapAccount, receiptTokenProgram, receiptTokenMint, 0)
+func (inst *AdminUpdateFundWrapAccountRewardAccountIfNeeded) FindReceiptTokenWrapAccountAddress(fundWrapAccount ag_solanago.PublicKey, receiptTokenMint ag_solanago.PublicKey) (pda ag_solanago.PublicKey, bumpSeed uint8, err error) {
+	pda, bumpSeed, err = inst.findFindReceiptTokenWrapAccountAddress(fundWrapAccount, receiptTokenMint, 0)
 	return
 }
 
-func (inst *AdminUpdateFundWrapAccountRewardAccountIfNeeded) MustFindReceiptTokenWrapAccountAddress(fundWrapAccount ag_solanago.PublicKey, receiptTokenProgram ag_solanago.PublicKey, receiptTokenMint ag_solanago.PublicKey) (pda ag_solanago.PublicKey) {
-	pda, _, err := inst.findFindReceiptTokenWrapAccountAddress(fundWrapAccount, receiptTokenProgram, receiptTokenMint, 0)
+func (inst *AdminUpdateFundWrapAccountRewardAccountIfNeeded) MustFindReceiptTokenWrapAccountAddress(fundWrapAccount ag_solanago.PublicKey, receiptTokenMint ag_solanago.PublicKey) (pda ag_solanago.PublicKey) {
+	pda, _, err := inst.findFindReceiptTokenWrapAccountAddress(fundWrapAccount, receiptTokenMint, 0)
 	if err != nil {
 		panic(err)
 	}
@@ -223,12 +209,12 @@ func (inst *AdminUpdateFundWrapAccountRewardAccountIfNeeded) MustFindReceiptToke
 
 // GetReceiptTokenWrapAccountAccount gets the "receipt_token_wrap_account" account.
 func (inst *AdminUpdateFundWrapAccountRewardAccountIfNeeded) GetReceiptTokenWrapAccountAccount() *ag_solanago.AccountMeta {
-	return inst.AccountMetaSlice.Get(6)
+	return inst.AccountMetaSlice.Get(5)
 }
 
 // SetFundAccountAccount sets the "fund_account" account.
 func (inst *AdminUpdateFundWrapAccountRewardAccountIfNeeded) SetFundAccountAccount(fundAccount ag_solanago.PublicKey) *AdminUpdateFundWrapAccountRewardAccountIfNeeded {
-	inst.AccountMetaSlice[7] = ag_solanago.Meta(fundAccount).WRITE()
+	inst.AccountMetaSlice[6] = ag_solanago.Meta(fundAccount)
 	return inst
 }
 
@@ -278,12 +264,12 @@ func (inst *AdminUpdateFundWrapAccountRewardAccountIfNeeded) MustFindFundAccount
 
 // GetFundAccountAccount gets the "fund_account" account.
 func (inst *AdminUpdateFundWrapAccountRewardAccountIfNeeded) GetFundAccountAccount() *ag_solanago.AccountMeta {
-	return inst.AccountMetaSlice.Get(7)
+	return inst.AccountMetaSlice.Get(6)
 }
 
 // SetRewardAccountAccount sets the "reward_account" account.
 func (inst *AdminUpdateFundWrapAccountRewardAccountIfNeeded) SetRewardAccountAccount(rewardAccount ag_solanago.PublicKey) *AdminUpdateFundWrapAccountRewardAccountIfNeeded {
-	inst.AccountMetaSlice[8] = ag_solanago.Meta(rewardAccount).WRITE()
+	inst.AccountMetaSlice[7] = ag_solanago.Meta(rewardAccount).WRITE()
 	return inst
 }
 
@@ -333,12 +319,12 @@ func (inst *AdminUpdateFundWrapAccountRewardAccountIfNeeded) MustFindRewardAccou
 
 // GetRewardAccountAccount gets the "reward_account" account.
 func (inst *AdminUpdateFundWrapAccountRewardAccountIfNeeded) GetRewardAccountAccount() *ag_solanago.AccountMeta {
-	return inst.AccountMetaSlice.Get(8)
+	return inst.AccountMetaSlice.Get(7)
 }
 
 // SetFundWrapAccountRewardAccountAccount sets the "fund_wrap_account_reward_account" account.
 func (inst *AdminUpdateFundWrapAccountRewardAccountIfNeeded) SetFundWrapAccountRewardAccountAccount(fundWrapAccountRewardAccount ag_solanago.PublicKey) *AdminUpdateFundWrapAccountRewardAccountIfNeeded {
-	inst.AccountMetaSlice[9] = ag_solanago.Meta(fundWrapAccountRewardAccount).WRITE()
+	inst.AccountMetaSlice[8] = ag_solanago.Meta(fundWrapAccountRewardAccount).WRITE()
 	return inst
 }
 
@@ -390,12 +376,12 @@ func (inst *AdminUpdateFundWrapAccountRewardAccountIfNeeded) MustFindFundWrapAcc
 
 // GetFundWrapAccountRewardAccountAccount gets the "fund_wrap_account_reward_account" account.
 func (inst *AdminUpdateFundWrapAccountRewardAccountIfNeeded) GetFundWrapAccountRewardAccountAccount() *ag_solanago.AccountMeta {
-	return inst.AccountMetaSlice.Get(9)
+	return inst.AccountMetaSlice.Get(8)
 }
 
 // SetEventAuthorityAccount sets the "event_authority" account.
 func (inst *AdminUpdateFundWrapAccountRewardAccountIfNeeded) SetEventAuthorityAccount(eventAuthority ag_solanago.PublicKey) *AdminUpdateFundWrapAccountRewardAccountIfNeeded {
-	inst.AccountMetaSlice[10] = ag_solanago.Meta(eventAuthority)
+	inst.AccountMetaSlice[9] = ag_solanago.Meta(eventAuthority)
 	return inst
 }
 
@@ -443,18 +429,18 @@ func (inst *AdminUpdateFundWrapAccountRewardAccountIfNeeded) MustFindEventAuthor
 
 // GetEventAuthorityAccount gets the "event_authority" account.
 func (inst *AdminUpdateFundWrapAccountRewardAccountIfNeeded) GetEventAuthorityAccount() *ag_solanago.AccountMeta {
-	return inst.AccountMetaSlice.Get(10)
+	return inst.AccountMetaSlice.Get(9)
 }
 
 // SetProgramAccount sets the "program" account.
 func (inst *AdminUpdateFundWrapAccountRewardAccountIfNeeded) SetProgramAccount(program ag_solanago.PublicKey) *AdminUpdateFundWrapAccountRewardAccountIfNeeded {
-	inst.AccountMetaSlice[11] = ag_solanago.Meta(program)
+	inst.AccountMetaSlice[10] = ag_solanago.Meta(program)
 	return inst
 }
 
 // GetProgramAccount gets the "program" account.
 func (inst *AdminUpdateFundWrapAccountRewardAccountIfNeeded) GetProgramAccount() *ag_solanago.AccountMeta {
-	return inst.AccountMetaSlice.Get(11)
+	return inst.AccountMetaSlice.Get(10)
 }
 
 func (inst AdminUpdateFundWrapAccountRewardAccountIfNeeded) Build() *Instruction {
@@ -497,24 +483,21 @@ func (inst *AdminUpdateFundWrapAccountRewardAccountIfNeeded) Validate() error {
 			return errors.New("accounts.ReceiptTokenMint is not set")
 		}
 		if inst.AccountMetaSlice[5] == nil {
-			return errors.New("accounts.ReceiptTokenProgram is not set")
-		}
-		if inst.AccountMetaSlice[6] == nil {
 			return errors.New("accounts.ReceiptTokenWrapAccount is not set")
 		}
-		if inst.AccountMetaSlice[7] == nil {
+		if inst.AccountMetaSlice[6] == nil {
 			return errors.New("accounts.FundAccount is not set")
 		}
-		if inst.AccountMetaSlice[8] == nil {
+		if inst.AccountMetaSlice[7] == nil {
 			return errors.New("accounts.RewardAccount is not set")
 		}
-		if inst.AccountMetaSlice[9] == nil {
+		if inst.AccountMetaSlice[8] == nil {
 			return errors.New("accounts.FundWrapAccountRewardAccount is not set")
 		}
-		if inst.AccountMetaSlice[10] == nil {
+		if inst.AccountMetaSlice[9] == nil {
 			return errors.New("accounts.EventAuthority is not set")
 		}
-		if inst.AccountMetaSlice[11] == nil {
+		if inst.AccountMetaSlice[10] == nil {
 			return errors.New("accounts.Program is not set")
 		}
 	}
@@ -535,19 +518,18 @@ func (inst *AdminUpdateFundWrapAccountRewardAccountIfNeeded) EncodeToTree(parent
 					})
 
 					// Accounts of the instruction:
-					instructionBranch.Child("Accounts[len=12]").ParentFunc(func(accountsBranch ag_treeout.Branches) {
+					instructionBranch.Child("Accounts[len=11]").ParentFunc(func(accountsBranch ag_treeout.Branches) {
 						accountsBranch.Child(ag_format.Meta("                    payer", inst.AccountMetaSlice.Get(0)))
 						accountsBranch.Child(ag_format.Meta("                    admin", inst.AccountMetaSlice.Get(1)))
 						accountsBranch.Child(ag_format.Meta("               fund_wrap_", inst.AccountMetaSlice.Get(2)))
 						accountsBranch.Child(ag_format.Meta("           system_program", inst.AccountMetaSlice.Get(3)))
 						accountsBranch.Child(ag_format.Meta("       receipt_token_mint", inst.AccountMetaSlice.Get(4)))
-						accountsBranch.Child(ag_format.Meta("    receipt_token_program", inst.AccountMetaSlice.Get(5)))
-						accountsBranch.Child(ag_format.Meta("      receipt_token_wrap_", inst.AccountMetaSlice.Get(6)))
-						accountsBranch.Child(ag_format.Meta("                    fund_", inst.AccountMetaSlice.Get(7)))
-						accountsBranch.Child(ag_format.Meta("                  reward_", inst.AccountMetaSlice.Get(8)))
-						accountsBranch.Child(ag_format.Meta("fund_wrap_account_reward_", inst.AccountMetaSlice.Get(9)))
-						accountsBranch.Child(ag_format.Meta("          event_authority", inst.AccountMetaSlice.Get(10)))
-						accountsBranch.Child(ag_format.Meta("                  program", inst.AccountMetaSlice.Get(11)))
+						accountsBranch.Child(ag_format.Meta("      receipt_token_wrap_", inst.AccountMetaSlice.Get(5)))
+						accountsBranch.Child(ag_format.Meta("                    fund_", inst.AccountMetaSlice.Get(6)))
+						accountsBranch.Child(ag_format.Meta("                  reward_", inst.AccountMetaSlice.Get(7)))
+						accountsBranch.Child(ag_format.Meta("fund_wrap_account_reward_", inst.AccountMetaSlice.Get(8)))
+						accountsBranch.Child(ag_format.Meta("          event_authority", inst.AccountMetaSlice.Get(9)))
+						accountsBranch.Child(ag_format.Meta("                  program", inst.AccountMetaSlice.Get(10)))
 					})
 				})
 		})
@@ -601,7 +583,6 @@ func NewAdminUpdateFundWrapAccountRewardAccountIfNeededInstruction(
 	fundWrapAccount ag_solanago.PublicKey,
 	systemProgram ag_solanago.PublicKey,
 	receiptTokenMint ag_solanago.PublicKey,
-	receiptTokenProgram ag_solanago.PublicKey,
 	receiptTokenWrapAccount ag_solanago.PublicKey,
 	fundAccount ag_solanago.PublicKey,
 	rewardAccount ag_solanago.PublicKey,
@@ -615,7 +596,6 @@ func NewAdminUpdateFundWrapAccountRewardAccountIfNeededInstruction(
 		SetFundWrapAccountAccount(fundWrapAccount).
 		SetSystemProgramAccount(systemProgram).
 		SetReceiptTokenMintAccount(receiptTokenMint).
-		SetReceiptTokenProgramAccount(receiptTokenProgram).
 		SetReceiptTokenWrapAccountAccount(receiptTokenWrapAccount).
 		SetFundAccountAccount(fundAccount).
 		SetRewardAccountAccount(rewardAccount).

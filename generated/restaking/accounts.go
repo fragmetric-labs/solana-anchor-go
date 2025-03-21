@@ -53,7 +53,8 @@ type FundAccountAccount struct {
 	// investments
 	Padding7           [15]uint8
 	NumRestakingVaults uint8
-	RestakingVaults    [30]RestakingVault
+	RestakingVaults    [16]RestakingVault
+	Padding8           [112]uint8
 
 	// fund operation state
 	Operation OperationState
@@ -61,6 +62,12 @@ type FundAccountAccount struct {
 	// optional wrapped token of fund receipt token
 	WrapAccount  ag_solanago.PublicKey
 	WrappedToken WrappedToken
+
+	// which DEX to use for swap between two tokens
+	NumTokenSwapStrategies uint8
+	Padding9               [7]uint8
+	TokenSwapStrategies    [30]TokenSwapStrategy
+	Reserved               [3616]uint8
 }
 
 var FundAccountAccountDiscriminator = [8]byte{49, 104, 168, 214, 134, 180, 173, 154}
@@ -236,6 +243,11 @@ func (obj FundAccountAccount) MarshalWithEncoder(encoder *ag_binary.Encoder) (er
 	if err != nil {
 		return err
 	}
+	// Serialize `Padding8` param:
+	err = encoder.Encode(obj.Padding8)
+	if err != nil {
+		return err
+	}
 	// Serialize `Operation` param:
 	err = encoder.Encode(obj.Operation)
 	if err != nil {
@@ -248,6 +260,26 @@ func (obj FundAccountAccount) MarshalWithEncoder(encoder *ag_binary.Encoder) (er
 	}
 	// Serialize `WrappedToken` param:
 	err = encoder.Encode(obj.WrappedToken)
+	if err != nil {
+		return err
+	}
+	// Serialize `NumTokenSwapStrategies` param:
+	err = encoder.Encode(obj.NumTokenSwapStrategies)
+	if err != nil {
+		return err
+	}
+	// Serialize `Padding9` param:
+	err = encoder.Encode(obj.Padding9)
+	if err != nil {
+		return err
+	}
+	// Serialize `TokenSwapStrategies` param:
+	err = encoder.Encode(obj.TokenSwapStrategies)
+	if err != nil {
+		return err
+	}
+	// Serialize `Reserved` param:
+	err = encoder.Encode(obj.Reserved)
 	if err != nil {
 		return err
 	}
@@ -433,6 +465,11 @@ func (obj *FundAccountAccount) UnmarshalWithDecoder(decoder *ag_binary.Decoder) 
 	if err != nil {
 		return err
 	}
+	// Deserialize `Padding8`:
+	err = decoder.Decode(&obj.Padding8)
+	if err != nil {
+		return err
+	}
 	// Deserialize `Operation`:
 	err = decoder.Decode(&obj.Operation)
 	if err != nil {
@@ -445,6 +482,26 @@ func (obj *FundAccountAccount) UnmarshalWithDecoder(decoder *ag_binary.Decoder) 
 	}
 	// Deserialize `WrappedToken`:
 	err = decoder.Decode(&obj.WrappedToken)
+	if err != nil {
+		return err
+	}
+	// Deserialize `NumTokenSwapStrategies`:
+	err = decoder.Decode(&obj.NumTokenSwapStrategies)
+	if err != nil {
+		return err
+	}
+	// Deserialize `Padding9`:
+	err = decoder.Decode(&obj.Padding9)
+	if err != nil {
+		return err
+	}
+	// Deserialize `TokenSwapStrategies`:
+	err = decoder.Decode(&obj.TokenSwapStrategies)
+	if err != nil {
+		return err
+	}
+	// Deserialize `Reserved`:
+	err = decoder.Decode(&obj.Reserved)
 	if err != nil {
 		return err
 	}

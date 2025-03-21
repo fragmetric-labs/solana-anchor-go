@@ -1111,24 +1111,18 @@ func (obj *DelegateVSTCommand) UnmarshalWithDecoder(decoder *ag_binary.Decoder) 
 }
 
 type DelegateVSTCommandItem struct {
-	Vault            ag_solanago.PublicKey
-	Operator         ag_solanago.PublicKey
-	DelegationAmount uint64
+	Operator                      ag_solanago.PublicKey
+	AllocatedSupportedTokenAmount uint64
 }
 
 func (obj DelegateVSTCommandItem) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
-	// Serialize `Vault` param:
-	err = encoder.Encode(obj.Vault)
-	if err != nil {
-		return err
-	}
 	// Serialize `Operator` param:
 	err = encoder.Encode(obj.Operator)
 	if err != nil {
 		return err
 	}
-	// Serialize `DelegationAmount` param:
-	err = encoder.Encode(obj.DelegationAmount)
+	// Serialize `AllocatedSupportedTokenAmount` param:
+	err = encoder.Encode(obj.AllocatedSupportedTokenAmount)
 	if err != nil {
 		return err
 	}
@@ -1136,18 +1130,13 @@ func (obj DelegateVSTCommandItem) MarshalWithEncoder(encoder *ag_binary.Encoder)
 }
 
 func (obj *DelegateVSTCommandItem) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
-	// Deserialize `Vault`:
-	err = decoder.Decode(&obj.Vault)
-	if err != nil {
-		return err
-	}
 	// Deserialize `Operator`:
 	err = decoder.Decode(&obj.Operator)
 	if err != nil {
 		return err
 	}
-	// Deserialize `DelegationAmount`:
-	err = decoder.Decode(&obj.DelegationAmount)
+	// Deserialize `AllocatedSupportedTokenAmount`:
+	err = decoder.Decode(&obj.AllocatedSupportedTokenAmount)
 	if err != nil {
 		return err
 	}
@@ -1155,14 +1144,47 @@ func (obj *DelegateVSTCommandItem) UnmarshalWithDecoder(decoder *ag_binary.Decod
 }
 
 type DelegateVSTCommandResult struct {
-	VaultSupportedTokenMint   ag_solanago.PublicKey
+	Vault       ag_solanago.PublicKey
+	Delegations []DelegateVSTCommandResultDelegated
+}
+
+func (obj DelegateVSTCommandResult) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	// Serialize `Vault` param:
+	err = encoder.Encode(obj.Vault)
+	if err != nil {
+		return err
+	}
+	// Serialize `Delegations` param:
+	err = encoder.Encode(obj.Delegations)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (obj *DelegateVSTCommandResult) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	// Deserialize `Vault`:
+	err = decoder.Decode(&obj.Vault)
+	if err != nil {
+		return err
+	}
+	// Deserialize `Delegations`:
+	err = decoder.Decode(&obj.Delegations)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+type DelegateVSTCommandResultDelegated struct {
+	Operator                  ag_solanago.PublicKey
 	DelegatedTokenAmount      uint64
 	TotalDelegatedTokenAmount uint64
 }
 
-func (obj DelegateVSTCommandResult) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
-	// Serialize `VaultSupportedTokenMint` param:
-	err = encoder.Encode(obj.VaultSupportedTokenMint)
+func (obj DelegateVSTCommandResultDelegated) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	// Serialize `Operator` param:
+	err = encoder.Encode(obj.Operator)
 	if err != nil {
 		return err
 	}
@@ -1179,9 +1201,9 @@ func (obj DelegateVSTCommandResult) MarshalWithEncoder(encoder *ag_binary.Encode
 	return nil
 }
 
-func (obj *DelegateVSTCommandResult) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
-	// Deserialize `VaultSupportedTokenMint`:
-	err = decoder.Decode(&obj.VaultSupportedTokenMint)
+func (obj *DelegateVSTCommandResultDelegated) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	// Deserialize `Operator`:
+	err = decoder.Decode(&obj.Operator)
 	if err != nil {
 		return err
 	}
@@ -1261,12 +1283,12 @@ func (obj *DelegateVSTCommandStateNewTuple) UnmarshalWithDecoder(decoder *ag_bin
 func (_ DelegateVSTCommandStateNewTuple) isDelegateVSTCommandState() {}
 
 type DelegateVSTCommandStatePrepareTuple struct {
-	Items []DelegateVSTCommandItem
+	Vaults []ag_solanago.PublicKey
 }
 
 func (obj DelegateVSTCommandStatePrepareTuple) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
-	// Serialize `Items` param:
-	err = encoder.Encode(obj.Items)
+	// Serialize `Vaults` param:
+	err = encoder.Encode(obj.Vaults)
 	if err != nil {
 		return err
 	}
@@ -1274,8 +1296,8 @@ func (obj DelegateVSTCommandStatePrepareTuple) MarshalWithEncoder(encoder *ag_bi
 }
 
 func (obj *DelegateVSTCommandStatePrepareTuple) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
-	// Deserialize `Items`:
-	err = decoder.Decode(&obj.Items)
+	// Deserialize `Vaults`:
+	err = decoder.Decode(&obj.Vaults)
 	if err != nil {
 		return err
 	}
@@ -1285,10 +1307,16 @@ func (obj *DelegateVSTCommandStatePrepareTuple) UnmarshalWithDecoder(decoder *ag
 func (_ DelegateVSTCommandStatePrepareTuple) isDelegateVSTCommandState() {}
 
 type DelegateVSTCommandStateExecuteTuple struct {
-	Items []DelegateVSTCommandItem
+	Vaults []ag_solanago.PublicKey
+	Items  []DelegateVSTCommandItem
 }
 
 func (obj DelegateVSTCommandStateExecuteTuple) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	// Serialize `Vaults` param:
+	err = encoder.Encode(obj.Vaults)
+	if err != nil {
+		return err
+	}
 	// Serialize `Items` param:
 	err = encoder.Encode(obj.Items)
 	if err != nil {
@@ -1298,6 +1326,11 @@ func (obj DelegateVSTCommandStateExecuteTuple) MarshalWithEncoder(encoder *ag_bi
 }
 
 func (obj *DelegateVSTCommandStateExecuteTuple) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	// Deserialize `Vaults`:
+	err = decoder.Decode(&obj.Vaults)
+	if err != nil {
+		return err
+	}
 	// Deserialize `Items`:
 	err = decoder.Decode(&obj.Items)
 	if err != nil {
@@ -1694,7 +1727,8 @@ type FundAccount struct {
 	// investments
 	Padding7           [15]uint8
 	NumRestakingVaults uint8
-	RestakingVaults    [30]RestakingVault
+	RestakingVaults    [16]RestakingVault
+	Padding8           [112]uint8
 
 	// fund operation state
 	Operation OperationState
@@ -1702,6 +1736,12 @@ type FundAccount struct {
 	// optional wrapped token of fund receipt token
 	WrapAccount  ag_solanago.PublicKey
 	WrappedToken WrappedToken
+
+	// which DEX to use for swap between two tokens
+	NumTokenSwapStrategies uint8
+	Padding9               [7]uint8
+	TokenSwapStrategies    [30]TokenSwapStrategy
+	Reserved               [3616]uint8
 }
 
 func (obj FundAccount) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
@@ -1870,6 +1910,11 @@ func (obj FundAccount) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error
 	if err != nil {
 		return err
 	}
+	// Serialize `Padding8` param:
+	err = encoder.Encode(obj.Padding8)
+	if err != nil {
+		return err
+	}
 	// Serialize `Operation` param:
 	err = encoder.Encode(obj.Operation)
 	if err != nil {
@@ -1882,6 +1927,26 @@ func (obj FundAccount) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error
 	}
 	// Serialize `WrappedToken` param:
 	err = encoder.Encode(obj.WrappedToken)
+	if err != nil {
+		return err
+	}
+	// Serialize `NumTokenSwapStrategies` param:
+	err = encoder.Encode(obj.NumTokenSwapStrategies)
+	if err != nil {
+		return err
+	}
+	// Serialize `Padding9` param:
+	err = encoder.Encode(obj.Padding9)
+	if err != nil {
+		return err
+	}
+	// Serialize `TokenSwapStrategies` param:
+	err = encoder.Encode(obj.TokenSwapStrategies)
+	if err != nil {
+		return err
+	}
+	// Serialize `Reserved` param:
+	err = encoder.Encode(obj.Reserved)
 	if err != nil {
 		return err
 	}
@@ -2054,6 +2119,11 @@ func (obj *FundAccount) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err er
 	if err != nil {
 		return err
 	}
+	// Deserialize `Padding8`:
+	err = decoder.Decode(&obj.Padding8)
+	if err != nil {
+		return err
+	}
 	// Deserialize `Operation`:
 	err = decoder.Decode(&obj.Operation)
 	if err != nil {
@@ -2066,6 +2136,26 @@ func (obj *FundAccount) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err er
 	}
 	// Deserialize `WrappedToken`:
 	err = decoder.Decode(&obj.WrappedToken)
+	if err != nil {
+		return err
+	}
+	// Deserialize `NumTokenSwapStrategies`:
+	err = decoder.Decode(&obj.NumTokenSwapStrategies)
+	if err != nil {
+		return err
+	}
+	// Deserialize `Padding9`:
+	err = decoder.Decode(&obj.Padding9)
+	if err != nil {
+		return err
+	}
+	// Deserialize `TokenSwapStrategies`:
+	err = decoder.Decode(&obj.TokenSwapStrategies)
+	if err != nil {
+		return err
+	}
+	// Deserialize `Reserved`:
+	err = decoder.Decode(&obj.Reserved)
 	if err != nil {
 		return err
 	}
@@ -2360,25 +2450,400 @@ func (obj *FundWithdrawalBatchAccount) UnmarshalWithDecoder(decoder *ag_binary.D
 	return nil
 }
 
-type HarvestRewardCommand struct{}
+type HarvestRewardCommand struct {
+	State *HarvestRewardCommandState
+}
 
 func (obj HarvestRewardCommand) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	// Serialize `State` param:
+	err = encoder.Encode(obj.State)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
 func (obj *HarvestRewardCommand) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	// Deserialize `State`:
+	err = decoder.Decode(&obj.State)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
-type HarvestRewardCommandResult struct{}
+type HarvestRewardCommandItem struct {
+	RewardTokenMint ag_solanago.PublicKey
+	HarvestType     *HarvestType
+}
+
+func (obj HarvestRewardCommandItem) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	// Serialize `RewardTokenMint` param:
+	err = encoder.Encode(obj.RewardTokenMint)
+	if err != nil {
+		return err
+	}
+	// Serialize `HarvestType` param:
+	err = encoder.Encode(obj.HarvestType)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (obj *HarvestRewardCommandItem) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	// Deserialize `RewardTokenMint`:
+	err = decoder.Decode(&obj.RewardTokenMint)
+	if err != nil {
+		return err
+	}
+	// Deserialize `HarvestType`:
+	err = decoder.Decode(&obj.HarvestType)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+type HarvestRewardCommandResult struct {
+	RewardTokenMint        ag_solanago.PublicKey
+	RewardTokenAmount      uint64
+	SwappedTokenMint       *ag_solanago.PublicKey `bin:"optional"`
+	DistributedTokenAmount uint64
+	CompoundedTokenAmount  uint64
+}
 
 func (obj HarvestRewardCommandResult) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	// Serialize `RewardTokenMint` param:
+	err = encoder.Encode(obj.RewardTokenMint)
+	if err != nil {
+		return err
+	}
+	// Serialize `RewardTokenAmount` param:
+	err = encoder.Encode(obj.RewardTokenAmount)
+	if err != nil {
+		return err
+	}
+	// Serialize `SwappedTokenMint` param (optional):
+	{
+		if obj.SwappedTokenMint == nil {
+			err = encoder.WriteBool(false)
+			if err != nil {
+				return err
+			}
+		} else {
+			err = encoder.WriteBool(true)
+			if err != nil {
+				return err
+			}
+			err = encoder.Encode(obj.SwappedTokenMint)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	// Serialize `DistributedTokenAmount` param:
+	err = encoder.Encode(obj.DistributedTokenAmount)
+	if err != nil {
+		return err
+	}
+	// Serialize `CompoundedTokenAmount` param:
+	err = encoder.Encode(obj.CompoundedTokenAmount)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
 func (obj *HarvestRewardCommandResult) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	// Deserialize `RewardTokenMint`:
+	err = decoder.Decode(&obj.RewardTokenMint)
+	if err != nil {
+		return err
+	}
+	// Deserialize `RewardTokenAmount`:
+	err = decoder.Decode(&obj.RewardTokenAmount)
+	if err != nil {
+		return err
+	}
+	// Deserialize `SwappedTokenMint` (optional):
+	{
+		ok, err := decoder.ReadBool()
+		if err != nil {
+			return err
+		}
+		if ok {
+			err = decoder.Decode(&obj.SwappedTokenMint)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	// Deserialize `DistributedTokenAmount`:
+	err = decoder.Decode(&obj.DistributedTokenAmount)
+	if err != nil {
+		return err
+	}
+	// Deserialize `CompoundedTokenAmount`:
+	err = decoder.Decode(&obj.CompoundedTokenAmount)
+	if err != nil {
+		return err
+	}
 	return nil
 }
+
+type HarvestRewardCommandState struct {
+	Value harvestRewardCommandState
+}
+
+func (obj HarvestRewardCommandState) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	tmp := harvestRewardCommandStateContainer{}
+	switch realvalue := obj.Value.(type) {
+	case HarvestRewardCommandStateNewTuple:
+		tmp.Enum = 0
+		tmp.New = realvalue
+	case HarvestRewardCommandStatePrepareTuple:
+		tmp.Enum = 1
+		tmp.Prepare = realvalue
+	case HarvestRewardCommandStatePrepareSwapTuple:
+		tmp.Enum = 2
+		tmp.PrepareSwap = realvalue
+	case HarvestRewardCommandStateExecuteTuple:
+		tmp.Enum = 3
+		tmp.Execute = realvalue
+	}
+	return encoder.Encode(tmp)
+}
+
+func (obj *HarvestRewardCommandState) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	tmp := new(harvestRewardCommandStateContainer)
+	err = decoder.Decode(tmp)
+	if err != nil {
+		return err
+	}
+	switch tmp.Enum {
+	case 0:
+		obj.Value = tmp.New
+	case 1:
+		obj.Value = tmp.Prepare
+	case 2:
+		obj.Value = tmp.PrepareSwap
+	case 3:
+		obj.Value = tmp.Execute
+	default:
+		return fmt.Errorf("unknown enum index: %v", tmp.Enum)
+	}
+	return nil
+}
+
+type harvestRewardCommandState interface {
+	isHarvestRewardCommandState()
+}
+
+type harvestRewardCommandStateContainer struct {
+	Enum        ag_binary.BorshEnum `borsh_enum:"true"`
+	New         HarvestRewardCommandStateNewTuple
+	Prepare     HarvestRewardCommandStatePrepareTuple
+	PrepareSwap HarvestRewardCommandStatePrepareSwapTuple
+	Execute     HarvestRewardCommandStateExecuteTuple
+}
+
+type HarvestRewardCommandStateNewTuple uint8
+
+func (obj HarvestRewardCommandStateNewTuple) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	return nil
+}
+
+func (obj *HarvestRewardCommandStateNewTuple) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	return nil
+}
+
+func (_ HarvestRewardCommandStateNewTuple) isHarvestRewardCommandState() {}
+
+type HarvestRewardCommandStatePrepareTuple struct {
+	Vaults []ag_solanago.PublicKey
+	Items  []HarvestRewardCommandItem
+}
+
+func (obj HarvestRewardCommandStatePrepareTuple) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	// Serialize `Vaults` param:
+	err = encoder.Encode(obj.Vaults)
+	if err != nil {
+		return err
+	}
+	// Serialize `Items` param:
+	err = encoder.Encode(obj.Items)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (obj *HarvestRewardCommandStatePrepareTuple) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	// Deserialize `Vaults`:
+	err = decoder.Decode(&obj.Vaults)
+	if err != nil {
+		return err
+	}
+	// Deserialize `Items`:
+	err = decoder.Decode(&obj.Items)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (_ HarvestRewardCommandStatePrepareTuple) isHarvestRewardCommandState() {}
+
+type HarvestRewardCommandStatePrepareSwapTuple struct {
+	Vaults []ag_solanago.PublicKey
+	Items  []HarvestRewardCommandItem
+}
+
+func (obj HarvestRewardCommandStatePrepareSwapTuple) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	// Serialize `Vaults` param:
+	err = encoder.Encode(obj.Vaults)
+	if err != nil {
+		return err
+	}
+	// Serialize `Items` param:
+	err = encoder.Encode(obj.Items)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (obj *HarvestRewardCommandStatePrepareSwapTuple) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	// Deserialize `Vaults`:
+	err = decoder.Decode(&obj.Vaults)
+	if err != nil {
+		return err
+	}
+	// Deserialize `Items`:
+	err = decoder.Decode(&obj.Items)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (_ HarvestRewardCommandStatePrepareSwapTuple) isHarvestRewardCommandState() {}
+
+type HarvestRewardCommandStateExecuteTuple struct {
+	Vaults []ag_solanago.PublicKey
+	Items  []HarvestRewardCommandItem
+}
+
+func (obj HarvestRewardCommandStateExecuteTuple) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	// Serialize `Vaults` param:
+	err = encoder.Encode(obj.Vaults)
+	if err != nil {
+		return err
+	}
+	// Serialize `Items` param:
+	err = encoder.Encode(obj.Items)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (obj *HarvestRewardCommandStateExecuteTuple) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	// Deserialize `Vaults`:
+	err = decoder.Decode(&obj.Vaults)
+	if err != nil {
+		return err
+	}
+	// Deserialize `Items`:
+	err = decoder.Decode(&obj.Items)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (_ HarvestRewardCommandStateExecuteTuple) isHarvestRewardCommandState() {}
+
+type HarvestType struct {
+	Value harvestType
+}
+
+func (obj HarvestType) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	tmp := harvestTypeContainer{}
+	switch realvalue := obj.Value.(type) {
+	case HarvestTypeSwapTuple:
+		tmp.Enum = 0
+		tmp.Swap = realvalue
+	case HarvestTypeTransferTuple:
+		tmp.Enum = 1
+		tmp.Transfer = realvalue
+	}
+	return encoder.Encode(tmp)
+}
+
+func (obj *HarvestType) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	tmp := new(harvestTypeContainer)
+	err = decoder.Decode(tmp)
+	if err != nil {
+		return err
+	}
+	switch tmp.Enum {
+	case 0:
+		obj.Value = tmp.Swap
+	case 1:
+		obj.Value = tmp.Transfer
+	default:
+		return fmt.Errorf("unknown enum index: %v", tmp.Enum)
+	}
+	return nil
+}
+
+type harvestType interface {
+	isHarvestType()
+}
+
+type harvestTypeContainer struct {
+	Enum     ag_binary.BorshEnum `borsh_enum:"true"`
+	Swap     HarvestTypeSwapTuple
+	Transfer HarvestTypeTransferTuple
+}
+
+type HarvestTypeSwapTuple struct {
+	Elem0 ag_solanago.PublicKey
+}
+
+func (obj HarvestTypeSwapTuple) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	// Serialize `Elem0` param:
+	err = encoder.Encode(obj.Elem0)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (obj *HarvestTypeSwapTuple) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	// Deserialize `Elem0`:
+	err = decoder.Decode(&obj.Elem0)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (_ HarvestTypeSwapTuple) isHarvestType() {}
+
+type HarvestTypeTransferTuple uint8
+
+func (obj HarvestTypeTransferTuple) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	return nil
+}
+
+func (obj *HarvestTypeTransferTuple) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	return nil
+}
+
+func (_ HarvestTypeTransferTuple) isHarvestType() {}
 
 type InitializeCommand struct {
 	State *InitializeCommandState
@@ -2402,33 +2867,33 @@ func (obj *InitializeCommand) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (
 	return nil
 }
 
-type InitializeCommandRestakingVaultUpdateItem struct {
-	Vault                    ag_solanago.PublicKey
-	DelegationsUpdatedBitmap []bool
+type InitializeCommandRestakingVaultDelegationUpdateItem struct {
+	Operator ag_solanago.PublicKey
+	Index    uint64
 }
 
-func (obj InitializeCommandRestakingVaultUpdateItem) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
-	// Serialize `Vault` param:
-	err = encoder.Encode(obj.Vault)
+func (obj InitializeCommandRestakingVaultDelegationUpdateItem) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	// Serialize `Operator` param:
+	err = encoder.Encode(obj.Operator)
 	if err != nil {
 		return err
 	}
-	// Serialize `DelegationsUpdatedBitmap` param:
-	err = encoder.Encode(obj.DelegationsUpdatedBitmap)
+	// Serialize `Index` param:
+	err = encoder.Encode(obj.Index)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (obj *InitializeCommandRestakingVaultUpdateItem) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
-	// Deserialize `Vault`:
-	err = decoder.Decode(&obj.Vault)
+func (obj *InitializeCommandRestakingVaultDelegationUpdateItem) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	// Deserialize `Operator`:
+	err = decoder.Decode(&obj.Operator)
 	if err != nil {
 		return err
 	}
-	// Deserialize `DelegationsUpdatedBitmap`:
-	err = decoder.Decode(&obj.DelegationsUpdatedBitmap)
+	// Deserialize `Index`:
+	err = decoder.Decode(&obj.Index)
 	if err != nil {
 		return err
 	}
@@ -2595,17 +3060,14 @@ type InitializeCommandState struct {
 func (obj InitializeCommandState) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
 	tmp := initializeCommandStateContainer{}
 	switch realvalue := obj.Value.(type) {
-	case InitializeCommandStateNewTuple:
+	case InitializeCommandStateNewRestakingVaultUpdateTuple:
 		tmp.Enum = 0
-		tmp.New = realvalue
-	case InitializeCommandStatePrepareSingleRestakingVaultUpdateTuple:
-		tmp.Enum = 1
-		tmp.PrepareSingleRestakingVaultUpdate = realvalue
+		tmp.NewRestakingVaultUpdate = realvalue
 	case InitializeCommandStatePrepareRestakingVaultUpdateTuple:
-		tmp.Enum = 2
+		tmp.Enum = 1
 		tmp.PrepareRestakingVaultUpdate = realvalue
 	case InitializeCommandStateExecuteRestakingVaultUpdateTuple:
-		tmp.Enum = 3
+		tmp.Enum = 2
 		tmp.ExecuteRestakingVaultUpdate = realvalue
 	}
 	return encoder.Encode(tmp)
@@ -2619,12 +3081,10 @@ func (obj *InitializeCommandState) UnmarshalWithDecoder(decoder *ag_binary.Decod
 	}
 	switch tmp.Enum {
 	case 0:
-		obj.Value = tmp.New
+		obj.Value = tmp.NewRestakingVaultUpdate
 	case 1:
-		obj.Value = tmp.PrepareSingleRestakingVaultUpdate
-	case 2:
 		obj.Value = tmp.PrepareRestakingVaultUpdate
-	case 3:
+	case 2:
 		obj.Value = tmp.ExecuteRestakingVaultUpdate
 	default:
 		return fmt.Errorf("unknown enum index: %v", tmp.Enum)
@@ -2637,67 +3097,31 @@ type initializeCommandState interface {
 }
 
 type initializeCommandStateContainer struct {
-	Enum                              ag_binary.BorshEnum `borsh_enum:"true"`
-	New                               InitializeCommandStateNewTuple
-	PrepareSingleRestakingVaultUpdate InitializeCommandStatePrepareSingleRestakingVaultUpdateTuple
-	PrepareRestakingVaultUpdate       InitializeCommandStatePrepareRestakingVaultUpdateTuple
-	ExecuteRestakingVaultUpdate       InitializeCommandStateExecuteRestakingVaultUpdateTuple
+	Enum                        ag_binary.BorshEnum `borsh_enum:"true"`
+	NewRestakingVaultUpdate     InitializeCommandStateNewRestakingVaultUpdateTuple
+	PrepareRestakingVaultUpdate InitializeCommandStatePrepareRestakingVaultUpdateTuple
+	ExecuteRestakingVaultUpdate InitializeCommandStateExecuteRestakingVaultUpdateTuple
 }
 
-type InitializeCommandStateNewTuple uint8
+type InitializeCommandStateNewRestakingVaultUpdateTuple uint8
 
-func (obj InitializeCommandStateNewTuple) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+func (obj InitializeCommandStateNewRestakingVaultUpdateTuple) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
 	return nil
 }
 
-func (obj *InitializeCommandStateNewTuple) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+func (obj *InitializeCommandStateNewRestakingVaultUpdateTuple) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
 	return nil
 }
 
-func (_ InitializeCommandStateNewTuple) isInitializeCommandState() {}
-
-type InitializeCommandStatePrepareSingleRestakingVaultUpdateTuple struct {
-	Vault    ag_solanago.PublicKey
-	Operator ag_solanago.PublicKey
-}
-
-func (obj InitializeCommandStatePrepareSingleRestakingVaultUpdateTuple) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
-	// Serialize `Vault` param:
-	err = encoder.Encode(obj.Vault)
-	if err != nil {
-		return err
-	}
-	// Serialize `Operator` param:
-	err = encoder.Encode(obj.Operator)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (obj *InitializeCommandStatePrepareSingleRestakingVaultUpdateTuple) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
-	// Deserialize `Vault`:
-	err = decoder.Decode(&obj.Vault)
-	if err != nil {
-		return err
-	}
-	// Deserialize `Operator`:
-	err = decoder.Decode(&obj.Operator)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (_ InitializeCommandStatePrepareSingleRestakingVaultUpdateTuple) isInitializeCommandState() {}
+func (_ InitializeCommandStateNewRestakingVaultUpdateTuple) isInitializeCommandState() {}
 
 type InitializeCommandStatePrepareRestakingVaultUpdateTuple struct {
-	Items []InitializeCommandRestakingVaultUpdateItem
+	Vaults []ag_solanago.PublicKey
 }
 
 func (obj InitializeCommandStatePrepareRestakingVaultUpdateTuple) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
-	// Serialize `Items` param:
-	err = encoder.Encode(obj.Items)
+	// Serialize `Vaults` param:
+	err = encoder.Encode(obj.Vaults)
 	if err != nil {
 		return err
 	}
@@ -2705,8 +3129,8 @@ func (obj InitializeCommandStatePrepareRestakingVaultUpdateTuple) MarshalWithEnc
 }
 
 func (obj *InitializeCommandStatePrepareRestakingVaultUpdateTuple) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
-	// Deserialize `Items`:
-	err = decoder.Decode(&obj.Items)
+	// Deserialize `Vaults`:
+	err = decoder.Decode(&obj.Vaults)
 	if err != nil {
 		return err
 	}
@@ -2716,10 +3140,16 @@ func (obj *InitializeCommandStatePrepareRestakingVaultUpdateTuple) UnmarshalWith
 func (_ InitializeCommandStatePrepareRestakingVaultUpdateTuple) isInitializeCommandState() {}
 
 type InitializeCommandStateExecuteRestakingVaultUpdateTuple struct {
-	Items []InitializeCommandRestakingVaultUpdateItem
+	Vaults []ag_solanago.PublicKey
+	Items  []InitializeCommandRestakingVaultDelegationUpdateItem
 }
 
 func (obj InitializeCommandStateExecuteRestakingVaultUpdateTuple) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	// Serialize `Vaults` param:
+	err = encoder.Encode(obj.Vaults)
+	if err != nil {
+		return err
+	}
 	// Serialize `Items` param:
 	err = encoder.Encode(obj.Items)
 	if err != nil {
@@ -2729,6 +3159,11 @@ func (obj InitializeCommandStateExecuteRestakingVaultUpdateTuple) MarshalWithEnc
 }
 
 func (obj *InitializeCommandStateExecuteRestakingVaultUpdateTuple) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	// Deserialize `Vaults`:
+	err = decoder.Decode(&obj.Vaults)
+	if err != nil {
+		return err
+	}
 	// Deserialize `Items`:
 	err = decoder.Decode(&obj.Items)
 	if err != nil {
@@ -4007,18 +4442,12 @@ func (obj *OperationCommandAccountMetaPod) UnmarshalWithDecoder(decoder *ag_bina
 
 type OperationCommandEntry struct {
 	Command          *OperationCommand
-	PricingSource    *TokenPricingSource
 	RequiredAccounts []OperationCommandAccountMeta
 }
 
 func (obj OperationCommandEntry) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
 	// Serialize `Command` param:
 	err = encoder.Encode(obj.Command)
-	if err != nil {
-		return err
-	}
-	// Serialize `PricingSource` param:
-	err = encoder.Encode(obj.PricingSource)
 	if err != nil {
 		return err
 	}
@@ -4033,11 +4462,6 @@ func (obj OperationCommandEntry) MarshalWithEncoder(encoder *ag_binary.Encoder) 
 func (obj *OperationCommandEntry) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
 	// Deserialize `Command`:
 	err = decoder.Decode(&obj.Command)
-	if err != nil {
-		return err
-	}
-	// Deserialize `PricingSource`:
-	err = decoder.Decode(&obj.PricingSource)
 	if err != nil {
 		return err
 	}
@@ -4106,7 +4530,7 @@ func (obj *OperationCommandEntryPod) UnmarshalWithDecoder(decoder *ag_binary.Dec
 
 type OperationCommandPod struct {
 	Discriminant uint8
-	Buffer       [2535]uint8
+	Buffer       [3126]uint8
 }
 
 func (obj OperationCommandPod) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
@@ -4601,7 +5025,7 @@ type OperationState struct {
 	NextSequence uint16
 	NumOperated  uint64
 	NextCommand  OperationCommandEntryPod
-	Reserved     [640]uint8
+	Reserved     [49]uint8
 }
 
 func (obj OperationState) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
@@ -5654,12 +6078,18 @@ type RestakingVault struct {
 	Padding2                    [7]uint8
 	NumDelegations              uint8
 	Delegations                 [30]RestakingVaultDelegation
+	RewardCommissionRateBps     uint16
 
 	// auto-compounding
-	Padding3                    [7]uint8
+	Padding3                    [5]uint8
 	NumCompoundingRewardTokens  uint8
 	CompoundingRewardTokenMints [10]ag_solanago.PublicKey
-	Reserved                    [128]uint8
+
+	// reward to distribute
+	Padding4                     [7]uint8
+	NumDistributingRewardTokens  uint8
+	DistributingRewardTokenMints [30]ag_solanago.PublicKey
+	Reserved                     [2296]uint8
 }
 
 func (obj RestakingVault) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
@@ -5743,6 +6173,11 @@ func (obj RestakingVault) MarshalWithEncoder(encoder *ag_binary.Encoder) (err er
 	if err != nil {
 		return err
 	}
+	// Serialize `RewardCommissionRateBps` param:
+	err = encoder.Encode(obj.RewardCommissionRateBps)
+	if err != nil {
+		return err
+	}
 	// Serialize `Padding3` param:
 	err = encoder.Encode(obj.Padding3)
 	if err != nil {
@@ -5755,6 +6190,21 @@ func (obj RestakingVault) MarshalWithEncoder(encoder *ag_binary.Encoder) (err er
 	}
 	// Serialize `CompoundingRewardTokenMints` param:
 	err = encoder.Encode(obj.CompoundingRewardTokenMints)
+	if err != nil {
+		return err
+	}
+	// Serialize `Padding4` param:
+	err = encoder.Encode(obj.Padding4)
+	if err != nil {
+		return err
+	}
+	// Serialize `NumDistributingRewardTokens` param:
+	err = encoder.Encode(obj.NumDistributingRewardTokens)
+	if err != nil {
+		return err
+	}
+	// Serialize `DistributingRewardTokenMints` param:
+	err = encoder.Encode(obj.DistributingRewardTokenMints)
 	if err != nil {
 		return err
 	}
@@ -5847,6 +6297,11 @@ func (obj *RestakingVault) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err
 	if err != nil {
 		return err
 	}
+	// Deserialize `RewardCommissionRateBps`:
+	err = decoder.Decode(&obj.RewardCommissionRateBps)
+	if err != nil {
+		return err
+	}
 	// Deserialize `Padding3`:
 	err = decoder.Decode(&obj.Padding3)
 	if err != nil {
@@ -5859,6 +6314,21 @@ func (obj *RestakingVault) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err
 	}
 	// Deserialize `CompoundingRewardTokenMints`:
 	err = decoder.Decode(&obj.CompoundingRewardTokenMints)
+	if err != nil {
+		return err
+	}
+	// Deserialize `Padding4`:
+	err = decoder.Decode(&obj.Padding4)
+	if err != nil {
+		return err
+	}
+	// Deserialize `NumDistributingRewardTokens`:
+	err = decoder.Decode(&obj.NumDistributingRewardTokens)
+	if err != nil {
+		return err
+	}
+	// Deserialize `DistributingRewardTokenMints`:
+	err = decoder.Decode(&obj.DistributingRewardTokenMints)
 	if err != nil {
 		return err
 	}
@@ -7645,6 +8115,167 @@ func (obj *TokenPricingSourcePod) UnmarshalWithDecoder(decoder *ag_binary.Decode
 	return nil
 }
 
+type TokenSwapSource struct {
+	Value tokenSwapSource
+}
+
+func (obj TokenSwapSource) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	tmp := tokenSwapSourceContainer{}
+	switch realvalue := obj.Value.(type) {
+	case TokenSwapSourceOrcaDEXLiquidityPoolTuple:
+		tmp.Enum = 0
+		tmp.OrcaDEXLiquidityPool = realvalue
+	}
+	return encoder.Encode(tmp)
+}
+
+func (obj *TokenSwapSource) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	tmp := new(tokenSwapSourceContainer)
+	err = decoder.Decode(tmp)
+	if err != nil {
+		return err
+	}
+	switch tmp.Enum {
+	case 0:
+		obj.Value = tmp.OrcaDEXLiquidityPool
+	default:
+		return fmt.Errorf("unknown enum index: %v", tmp.Enum)
+	}
+	return nil
+}
+
+type tokenSwapSource interface {
+	isTokenSwapSource()
+}
+
+type tokenSwapSourceContainer struct {
+	Enum                 ag_binary.BorshEnum `borsh_enum:"true"`
+	OrcaDEXLiquidityPool TokenSwapSourceOrcaDEXLiquidityPoolTuple
+}
+
+type TokenSwapSourceOrcaDEXLiquidityPoolTuple struct {
+	Address ag_solanago.PublicKey
+}
+
+func (obj TokenSwapSourceOrcaDEXLiquidityPoolTuple) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	// Serialize `Address` param:
+	err = encoder.Encode(obj.Address)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (obj *TokenSwapSourceOrcaDEXLiquidityPoolTuple) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	// Deserialize `Address`:
+	err = decoder.Decode(&obj.Address)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (_ TokenSwapSourceOrcaDEXLiquidityPoolTuple) isTokenSwapSource() {}
+
+type TokenSwapSourcePod struct {
+	Discriminant uint8
+	Padding      [7]uint8
+	Address      ag_solanago.PublicKey
+}
+
+func (obj TokenSwapSourcePod) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	// Serialize `Discriminant` param:
+	err = encoder.Encode(obj.Discriminant)
+	if err != nil {
+		return err
+	}
+	// Serialize `Padding` param:
+	err = encoder.Encode(obj.Padding)
+	if err != nil {
+		return err
+	}
+	// Serialize `Address` param:
+	err = encoder.Encode(obj.Address)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (obj *TokenSwapSourcePod) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	// Deserialize `Discriminant`:
+	err = decoder.Decode(&obj.Discriminant)
+	if err != nil {
+		return err
+	}
+	// Deserialize `Padding`:
+	err = decoder.Decode(&obj.Padding)
+	if err != nil {
+		return err
+	}
+	// Deserialize `Address`:
+	err = decoder.Decode(&obj.Address)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+type TokenSwapStrategy struct {
+	FromTokenMint ag_solanago.PublicKey
+	ToTokenMint   ag_solanago.PublicKey
+	SwapSource    TokenSwapSourcePod
+	Reserved      [128]uint8
+}
+
+func (obj TokenSwapStrategy) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	// Serialize `FromTokenMint` param:
+	err = encoder.Encode(obj.FromTokenMint)
+	if err != nil {
+		return err
+	}
+	// Serialize `ToTokenMint` param:
+	err = encoder.Encode(obj.ToTokenMint)
+	if err != nil {
+		return err
+	}
+	// Serialize `SwapSource` param:
+	err = encoder.Encode(obj.SwapSource)
+	if err != nil {
+		return err
+	}
+	// Serialize `Reserved` param:
+	err = encoder.Encode(obj.Reserved)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (obj *TokenSwapStrategy) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	// Deserialize `FromTokenMint`:
+	err = decoder.Decode(&obj.FromTokenMint)
+	if err != nil {
+		return err
+	}
+	// Deserialize `ToTokenMint`:
+	err = decoder.Decode(&obj.ToTokenMint)
+	if err != nil {
+		return err
+	}
+	// Deserialize `SwapSource`:
+	err = decoder.Decode(&obj.SwapSource)
+	if err != nil {
+		return err
+	}
+	// Deserialize `Reserved`:
+	err = decoder.Decode(&obj.Reserved)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 type TokenValue struct {
 	Numerator   []Asset
 	Denominator uint64
@@ -7722,25 +8353,269 @@ func (obj *TokenValuePod) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err 
 	return nil
 }
 
-type UndelegateVSTCommand struct{}
+type UndelegateVSTCommand struct {
+	State *UndelegateVSTCommandState
+}
 
 func (obj UndelegateVSTCommand) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	// Serialize `State` param:
+	err = encoder.Encode(obj.State)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
 func (obj *UndelegateVSTCommand) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	// Deserialize `State`:
+	err = decoder.Decode(&obj.State)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
-type UndelegateVSTCommandResult struct{}
+type UndelegateVSTCommandItem struct {
+	Operator                      ag_solanago.PublicKey
+	AllocatedSupportedTokenAmount uint64
+}
+
+func (obj UndelegateVSTCommandItem) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	// Serialize `Operator` param:
+	err = encoder.Encode(obj.Operator)
+	if err != nil {
+		return err
+	}
+	// Serialize `AllocatedSupportedTokenAmount` param:
+	err = encoder.Encode(obj.AllocatedSupportedTokenAmount)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (obj *UndelegateVSTCommandItem) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	// Deserialize `Operator`:
+	err = decoder.Decode(&obj.Operator)
+	if err != nil {
+		return err
+	}
+	// Deserialize `AllocatedSupportedTokenAmount`:
+	err = decoder.Decode(&obj.AllocatedSupportedTokenAmount)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+type UndelegateVSTCommandResult struct {
+	Vault         ag_solanago.PublicKey
+	Undelegations []UndelegateVSTCommandResultUndelegated
+}
 
 func (obj UndelegateVSTCommandResult) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	// Serialize `Vault` param:
+	err = encoder.Encode(obj.Vault)
+	if err != nil {
+		return err
+	}
+	// Serialize `Undelegations` param:
+	err = encoder.Encode(obj.Undelegations)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
 func (obj *UndelegateVSTCommandResult) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	// Deserialize `Vault`:
+	err = decoder.Decode(&obj.Vault)
+	if err != nil {
+		return err
+	}
+	// Deserialize `Undelegations`:
+	err = decoder.Decode(&obj.Undelegations)
+	if err != nil {
+		return err
+	}
 	return nil
 }
+
+type UndelegateVSTCommandResultUndelegated struct {
+	Operator                         ag_solanago.PublicKey
+	UndelegationRequestedTokenAmount uint64
+	TotalDelegatedTokenAmount        uint64
+	TotalUndelegatingTokenAmount     uint64
+}
+
+func (obj UndelegateVSTCommandResultUndelegated) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	// Serialize `Operator` param:
+	err = encoder.Encode(obj.Operator)
+	if err != nil {
+		return err
+	}
+	// Serialize `UndelegationRequestedTokenAmount` param:
+	err = encoder.Encode(obj.UndelegationRequestedTokenAmount)
+	if err != nil {
+		return err
+	}
+	// Serialize `TotalDelegatedTokenAmount` param:
+	err = encoder.Encode(obj.TotalDelegatedTokenAmount)
+	if err != nil {
+		return err
+	}
+	// Serialize `TotalUndelegatingTokenAmount` param:
+	err = encoder.Encode(obj.TotalUndelegatingTokenAmount)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (obj *UndelegateVSTCommandResultUndelegated) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	// Deserialize `Operator`:
+	err = decoder.Decode(&obj.Operator)
+	if err != nil {
+		return err
+	}
+	// Deserialize `UndelegationRequestedTokenAmount`:
+	err = decoder.Decode(&obj.UndelegationRequestedTokenAmount)
+	if err != nil {
+		return err
+	}
+	// Deserialize `TotalDelegatedTokenAmount`:
+	err = decoder.Decode(&obj.TotalDelegatedTokenAmount)
+	if err != nil {
+		return err
+	}
+	// Deserialize `TotalUndelegatingTokenAmount`:
+	err = decoder.Decode(&obj.TotalUndelegatingTokenAmount)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+type UndelegateVSTCommandState struct {
+	Value undelegateVSTCommandState
+}
+
+func (obj UndelegateVSTCommandState) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	tmp := undelegateVSTCommandStateContainer{}
+	switch realvalue := obj.Value.(type) {
+	case UndelegateVSTCommandStateNewTuple:
+		tmp.Enum = 0
+		tmp.New = realvalue
+	case UndelegateVSTCommandStatePrepareTuple:
+		tmp.Enum = 1
+		tmp.Prepare = realvalue
+	case UndelegateVSTCommandStateExecuteTuple:
+		tmp.Enum = 2
+		tmp.Execute = realvalue
+	}
+	return encoder.Encode(tmp)
+}
+
+func (obj *UndelegateVSTCommandState) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	tmp := new(undelegateVSTCommandStateContainer)
+	err = decoder.Decode(tmp)
+	if err != nil {
+		return err
+	}
+	switch tmp.Enum {
+	case 0:
+		obj.Value = tmp.New
+	case 1:
+		obj.Value = tmp.Prepare
+	case 2:
+		obj.Value = tmp.Execute
+	default:
+		return fmt.Errorf("unknown enum index: %v", tmp.Enum)
+	}
+	return nil
+}
+
+type undelegateVSTCommandState interface {
+	isUndelegateVSTCommandState()
+}
+
+type undelegateVSTCommandStateContainer struct {
+	Enum    ag_binary.BorshEnum `borsh_enum:"true"`
+	New     UndelegateVSTCommandStateNewTuple
+	Prepare UndelegateVSTCommandStatePrepareTuple
+	Execute UndelegateVSTCommandStateExecuteTuple
+}
+
+type UndelegateVSTCommandStateNewTuple uint8
+
+func (obj UndelegateVSTCommandStateNewTuple) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	return nil
+}
+
+func (obj *UndelegateVSTCommandStateNewTuple) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	return nil
+}
+
+func (_ UndelegateVSTCommandStateNewTuple) isUndelegateVSTCommandState() {}
+
+type UndelegateVSTCommandStatePrepareTuple struct {
+	Vaults []ag_solanago.PublicKey
+}
+
+func (obj UndelegateVSTCommandStatePrepareTuple) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	// Serialize `Vaults` param:
+	err = encoder.Encode(obj.Vaults)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (obj *UndelegateVSTCommandStatePrepareTuple) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	// Deserialize `Vaults`:
+	err = decoder.Decode(&obj.Vaults)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (_ UndelegateVSTCommandStatePrepareTuple) isUndelegateVSTCommandState() {}
+
+type UndelegateVSTCommandStateExecuteTuple struct {
+	Vaults []ag_solanago.PublicKey
+	Items  []UndelegateVSTCommandItem
+}
+
+func (obj UndelegateVSTCommandStateExecuteTuple) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {
+	// Serialize `Vaults` param:
+	err = encoder.Encode(obj.Vaults)
+	if err != nil {
+		return err
+	}
+	// Serialize `Items` param:
+	err = encoder.Encode(obj.Items)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (obj *UndelegateVSTCommandStateExecuteTuple) UnmarshalWithDecoder(decoder *ag_binary.Decoder) (err error) {
+	// Deserialize `Vaults`:
+	err = decoder.Decode(&obj.Vaults)
+	if err != nil {
+		return err
+	}
+	// Deserialize `Items`:
+	err = decoder.Decode(&obj.Items)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (_ UndelegateVSTCommandStateExecuteTuple) isUndelegateVSTCommandState() {}
 
 type UnrestakeVRTCommand struct {
 	State *UnrestakeVRTCommandState
@@ -10282,7 +11157,7 @@ type WrappedToken struct {
 	Enabled  uint8
 	Padding  [6]uint8
 	Supply   uint64
-	Reserved [64]uint8
+	Reserved [1984]uint8
 }
 
 func (obj WrappedToken) MarshalWithEncoder(encoder *ag_binary.Encoder) (err error) {

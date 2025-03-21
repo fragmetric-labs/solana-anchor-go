@@ -426,6 +426,21 @@ var (
 		msg:  "fund: wrapped token is not set",
 		name: "FundWrappedTokenNotSetError",
 	}
+	ErrFundTokenSwapStrategyAlreadyRegistered = &customErrorDef{
+		code: 6082,
+		msg:  "fund: token swap strategy already registered",
+		name: "FundTokenSwapStrategyAlreadyRegistered",
+	}
+	ErrFundExceededMaxTokenSwapStrategiesError = &customErrorDef{
+		code: 6083,
+		msg:  "fund: exceeded max token swap strategies",
+		name: "FundExceededMaxTokenSwapStrategiesError",
+	}
+	ErrFundTokenSwapStrategyNotFoundError = &customErrorDef{
+		code: 6084,
+		msg:  "fund: token swap strategy not found",
+		name: "FundTokenSwapStrategyNotFoundError",
+	}
 	Errors = map[int]CustomError{
 		6000: ErrCalculationArithmeticException,
 		6001: ErrIndexOutOfBoundsException,
@@ -509,6 +524,9 @@ var (
 		6079: ErrFundDonationDisabledError,
 		6080: ErrFundWrappedTokenAlreadySetError,
 		6081: ErrFundWrappedTokenNotSetError,
+		6082: ErrFundTokenSwapStrategyAlreadyRegistered,
+		6083: ErrFundExceededMaxTokenSwapStrategiesError,
+		6084: ErrFundTokenSwapStrategyNotFoundError,
 	}
 )
 
