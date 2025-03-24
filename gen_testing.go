@@ -139,9 +139,8 @@ func genTestingFuncs(idl IDL) ([]*FileWrapper, error) {
 
 										if isInsFieldComplexEnum(instruction.Args...) {
 											genTestWithComplexEnum(tFunGroup, insExportedName, instruction, idl)
-											// TODO: need to add genTest for struct field that include complex enum fields
-											//} else if isInsDeepFieldComplexEnum(idl, instruction.Args...) {
-											// genTestWithDeepComplexEnum(tFunGroup, insExportedName, instruction, idl)
+										} else if isInsDeepFieldComplexEnum(idl, instruction.Args...) {
+											genTestWithDeepComplexEnum(tFunGroup, insExportedName, instruction, idl)
 										} else {
 											genTestNOComplexEnum(tFunGroup, insExportedName, instruction)
 										}
@@ -228,4 +227,31 @@ func genTestWithComplexEnum(tFunGroup *Group, insExportedName string, instructio
 
 		})
 	}
+}
+
+func genTestWithDeepComplexEnum(tFunGroup *Group, insExportedName string, instruction IdlInstruction, idl IDL) {
+	tFunGroup.Id("params").Op(":=").New(Id(insExportedName))
+	tFunGroup.Id("fu").Dot("Fuzz").Call(Id("params"))
+	tFunGroup.Id("params").Dot("AccountMetaSlice").Op("=").Nil()
+
+	// Bypass testing for structs containing enum fields
+	for _, arg := range instruction.Args {
+		if isComplexEnum(arg.Type) {
+			continue
+		}
+		exportedArgName := ToCamel(arg.Name)
+		tFunGroup.Id("params").Dot(exportedArgName).Op("=").Nil()
+	}
+
+	tFunGroup.Id("buf").Op(":=").New(Qual("bytes", "Buffer"))
+	tFunGroup.Id("err").Op(":=").Id("encodeT").Call(Op("*").Id("params"), Id("buf"))
+	tFunGroup.Qual(PkgTestifyRequire, "NoError").Call(Id("t"), Err())
+
+	tFunGroup.Comment("//")
+
+	tFunGroup.Id("got").Op(":=").New(Id(insExportedName))
+	tFunGroup.Id("err").Op("=").Id("decodeT").Call(Id("got"), Id("buf").Dot("Bytes").Call())
+	tFunGroup.Id("got").Dot("AccountMetaSlice").Op("=").Nil()
+	tFunGroup.Qual(PkgTestifyRequire, "NoError").Call(Id("t"), Err())
+	tFunGroup.Qual(PkgTestifyRequire, "Equal").Call(Id("t"), Id("params"), Id("got"))
 }
