@@ -281,6 +281,11 @@ type IdlTypeArray struct {
 	Num  int
 }
 
+type IdlTypeMap struct {
+	Key IdlType
+	Val IdlType
+}
+
 func (env *IdlType) UnmarshalJSON(data []byte) error {
 
 	var temp interface{}
@@ -345,7 +350,24 @@ func (env *IdlType) UnmarshalJSON(data []byte) error {
 
 				env.asIdlTypeArray = &target
 			}
-			// panic(Sf("what is this?:\n%s", spew.Sdump(temp)))
+			if got, ok := v["hashMap"]; ok {
+				arrVal, ok := got.([]any)
+				if !ok {
+					panic(Sf("hashMap is not in expected format:\n%s", spew.Sdump(got)))
+				}
+				if len(arrVal) != 2 {
+					panic(Sf("hashMap is not of expected length:\n%s", spew.Sdump(got)))
+				}
+
+				var target IdlTypeMap
+				if err := TranscodeJSON(arrVal[0], &target.Key); err != nil {
+					return err
+				}
+				if err := TranscodeJSON(arrVal[1], &target.Val); err != nil {
+					return err
+				}
+				env.asIdlTypeMap = &target
+			}
 		}
 	default:
 		return fmt.Errorf("unknown kind: %s", spew.Sdump(temp))
@@ -361,6 +383,7 @@ type IdlType struct {
 	asIdlTypeOption  *IdlTypeOption
 	asIdlTypeDefined *IdlTypeDefined
 	asIdlTypeArray   *IdlTypeArray
+	asIdlTypeMap     *IdlTypeMap
 }
 
 func (env *IdlType) IsString() bool {
@@ -379,6 +402,10 @@ func (env *IdlType) IsArray() bool {
 	return env.asIdlTypeArray != nil
 }
 
+func (env *IdlType) IsIdlHashMap() bool {
+	return env.asIdlTypeMap != nil
+}
+
 // Getters:
 func (env *IdlType) GetString() IdlTypeAsString {
 	return env.asString
@@ -395,6 +422,9 @@ func (env *IdlType) GetIdlTypeDefined() *IdlTypeDefined {
 func (env *IdlType) GetArray() *IdlTypeArray {
 	return env.asIdlTypeArray
 }
+func (env *IdlType) GetIdlTypeMap() *IdlTypeMap {
+	return env.asIdlTypeMap
+}
 func (env *IdlType) GetDefinedFieldName() *string {
 	if env.IsIdlTypeDefined() {
 		return &env.asIdlTypeDefined.Defined.Name
@@ -404,6 +434,9 @@ func (env *IdlType) GetDefinedFieldName() *string {
 	}
 	if env.IsIdlTypeOption() {
 		return env.asIdlTypeOption.Option.GetDefinedFieldName()
+	}
+	if env.IsIdlHashMap() {
+		return env.asIdlTypeMap.Val.GetDefinedFieldName()
 	}
 	if env.IsArray() {
 		return env.asIdlTypeArray.Elem.GetDefinedFieldName()

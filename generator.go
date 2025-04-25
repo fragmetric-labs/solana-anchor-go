@@ -121,6 +121,11 @@ func genTypeName(idlTypeEnv IdlType) Code {
 			arr := idlTypeEnv.GetArray()
 			st.Index(Id(Itoa(arr.Num))).Add(genTypeName(arr.Elem))
 		}
+	case idlTypeEnv.IsIdlHashMap():
+		{
+			hashMap := idlTypeEnv.GetIdlTypeMap()
+			st.Map(genTypeName(hashMap.Key)).Add(genTypeName(hashMap.Val))
+		}
 	default:
 		panic(spew.Sdump(idlTypeEnv))
 	}

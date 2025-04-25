@@ -249,6 +249,11 @@ func GenerateClientFromProgramIDL(idl IDL) ([]*FileWrapper, error) {
 		for _, typ := range idl.Types {
 			defs[typ.Name] = typ
 		}
+		for _, accountDef := range idl.Accounts {
+			if accountDef.Type.Fields != nil || accountDef.Type.Variants != nil || accountDef.Type.Alias != nil {
+				defs[accountDef.Name] = accountDef
+			}
+		}
 	}
 
 	// Instructions:
@@ -998,7 +1003,7 @@ func GenerateClientFromProgramIDL(idl IDL) ([]*FileWrapper, error) {
 					Type: defs[acc.Name].Type,
 				}))
 			} else {
-				panic(`not implemented - only IDL from ("anchor": ">=0.30.0") is available`)
+				panic("account " + acc.Name + " not found in IDL types")
 			}
 		}
 		files = append(files, &FileWrapper{
@@ -1022,7 +1027,7 @@ func GenerateClientFromProgramIDL(idl IDL) ([]*FileWrapper, error) {
 				}))
 				file.Add(Func().Params(Op("*").Id(eventDataTypeName)).Id("isEventData").Params().Block())
 			} else {
-				panic(`not implemented - only IDL from ("anchor": ">=0.30.0") is available`)
+				panic("event " + evt.Name + " not found in IDL types")
 			}
 		}
 
@@ -1599,8 +1604,8 @@ func genProgramBoilerplate(idl IDL) (*File, error) {
 	{
 		// `SetProgramID` func:
 		code := Empty()
-		code.Func().Id("SetProgramID").Params(Id("PublicKey").Qual(PkgSolanaGo, "PublicKey")).Block(
-			Id("ProgramID").Op("=").Id("PublicKey"),
+		code.Func().Id("SetProgramID").Params(Id("pubkey").Qual(PkgSolanaGo, "PublicKey")).Block(
+			Id("ProgramID").Op("=").Id("pubkey"),
 			Qual(PkgSolanaGo, "RegisterInstructionDecoder").Call(Id("ProgramID"), Id("registryDecodeInstruction")),
 		)
 		file.Add(code.Line())
