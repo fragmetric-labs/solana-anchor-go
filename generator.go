@@ -164,8 +164,9 @@ func genTypeDef(idl *IDL, withDiscriminator *[8]byte, def IdlTypeDef) Code {
 	st := newStatement()
 	switch def.Type.Kind {
 	case IdlTypeDefTyKindStruct:
+		exportedAccountName := ToCamel(def.Name)
 		code := Empty()
-		code.Type().Id(def.Name).StructFunc(func(fieldsGroup *Group) {
+		code.Type().Id(exportedAccountName).StructFunc(func(fieldsGroup *Group) {
 			if def.Type.Fields == nil {
 				emptyFields := []IdlField{}
 				def.Type.Fields = (*IdlStructFieldSlice)(&emptyFields)
@@ -194,7 +195,6 @@ func genTypeDef(idl *IDL, withDiscriminator *[8]byte, def IdlTypeDef) Code {
 			// generate encoder and decoder methods (for borsh):
 			if GetConfig().Encoding == EncodingBorsh {
 				code := Empty()
-				exportedAccountName := ToCamel(def.Name)
 
 				//toBeHashed := ToCamel(def.Name)
 
