@@ -416,13 +416,15 @@ type IdlTypeDefTy struct {
 	Kind     IdlTypeDefTyKind     `json:"kind"`
 	Fields   *IdlStructFieldSlice `json:"fields,omitempty"`
 	Variants *IdlEnumVariantSlice `json:"variants,omitempty"`
+	Alias    *IdlType             `json:"alias,omitempty"`
 }
 
 type IdlTypeDefTyKind string
 
 const (
-	IdlTypeDefTyKindStruct IdlTypeDefTyKind = "struct"
-	IdlTypeDefTyKindEnum   IdlTypeDefTyKind = "enum"
+	IdlTypeDefTyKindStruct    IdlTypeDefTyKind = "struct"
+	IdlTypeDefTyKindEnum      IdlTypeDefTyKind = "enum"
+	IdlTypeDefTyKindTypeAlias IdlTypeDefTyKind = "type"
 )
 
 type IdlStructFieldSlice []IdlField

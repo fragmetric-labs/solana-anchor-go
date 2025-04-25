@@ -501,7 +501,10 @@ func genTypeDef(idl *IDL, withDiscriminator *[8]byte, def IdlTypeDef) Code {
 			st.Add(code.Line().Line())
 		}
 
-		// panic(Sf("not implemented: %s", spew.Sdump(def)))
+	case IdlTypeDefTyKindTypeAlias:
+		code := Empty()
+		code.Type().Id(def.Name).Op("=").Add(genTypeName(*def.Type.Alias))
+		st.Add(code.Line())
 	default:
 		panic(Sf("not implemented: %s", spew.Sdump(def.Type.Kind)))
 	}

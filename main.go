@@ -1090,8 +1090,8 @@ func GenerateClientFromProgramIDL(idl IDL) ([]*FileWrapper, error) {
 			typeName := typ.Name
 			if nameOccupied[typ.Name] {
 				typeName += "Struct"
+				file.Comment(typ.Name + " conflict with other type, so we add `Struct` suffix.")
 			}
-			file.Comment(typ.Name + " conflict with other type, so we add `Struct` suffix.")
 			file.Add(genTypeDef(&idl, nil, IdlTypeDef{
 				Name: typeName,
 				Type: typ.Type,
