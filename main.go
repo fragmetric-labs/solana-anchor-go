@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/davecgh/go-spew/spew"
-	"github.com/gagliardetto/solana-go"
 	"io/ioutil"
 	"os"
 	"path"
@@ -15,6 +13,9 @@ import (
 	"strings"
 	"time"
 	"unicode/utf8"
+
+	"github.com/davecgh/go-spew/spew"
+	"github.com/gagliardetto/solana-go"
 
 	. "github.com/dave/jennifer/jen"
 	"github.com/fragmetric-labs/solana-anchor-go/sighash"
@@ -281,7 +282,7 @@ func DecodeInstructions(message *ag_solanago.Message) (instructions []*Instructi
 			return
 		}
 		var insDecoded *Instruction
-		if insDecoded, err = decodeInstruction(accounts, ins.Data); err != nil {
+		if insDecoded, err = DecodeInstruction(accounts, ins.Data); err != nil {
 			return
 		}
 		instructions = append(instructions, insDecoded)
@@ -2316,7 +2317,7 @@ func genProgramBoilerplate(idl IDL) (*File, error) {
 				).
 				BlockFunc(func(body *Group) {
 					// Body:
-					body.List(Id("inst"), Err()).Op(":=").Id("decodeInstruction").Call(Id("accounts"), Id("data"))
+					body.List(Id("inst"), Err()).Op(":=").Id("DecodeInstruction").Call(Id("accounts"), Id("data"))
 
 					body.If(
 						Err().Op("!=").Nil(),
@@ -2330,7 +2331,7 @@ func genProgramBoilerplate(idl IDL) (*File, error) {
 		{
 			// `DecodeInstruction` func:
 			code := Empty()
-			code.Func().Id("decodeInstruction").
+			code.Func().Id("DecodeInstruction").
 				Params(
 					ListFunc(func(params *Group) {
 						// Parameters:
