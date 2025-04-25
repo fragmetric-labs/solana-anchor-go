@@ -83,7 +83,7 @@ func genField(field IdlField, pointer bool) Code {
 	st.Id(ToCamel(field.Name)).
 		Add(func() Code {
 			if isComplexEnum(field.Type) {
-				return Op("*")
+				return nil
 			}
 			if pointer {
 				return Op("*")
@@ -303,34 +303,11 @@ func genTypeDef(idl *IDL, withDiscriminator *[8]byte, def IdlTypeDef) Code {
 			st.Add(code.Line())
 		} else {
 			addTypeNameIsComplexEnum(enumTypeName)
-			interfaceTypeName := ToLowerCamel(enumTypeName)
 			containerName := formatEnumContainerName(enumTypeName)
 			interfaceMethodName := formatInterfaceMethodName(enumTypeName)
 
-			// Declare the wrapper struct of the enum type interface
-			code.Type().Id(enumTypeName).Struct(
-				Id("Value").Qual("", interfaceTypeName),
-			).Line().Line()
-
-			{
-				// Declare MarshalWithDecoder of the wrapper struct
-				code.Line().Line().Add(
-					genMarshalWithEncoder_enum(
-						enumTypeName,
-						def.Type.Variants,
-					))
-
-				//// Declare UnmarshalWithDecoder of the wrapper struct
-				code.Line().Line().Add(
-					genUnmarshalWithDecoder_enum(
-						enumTypeName,
-						def.Type.Variants,
-					))
-				code.Line().Line()
-			}
-
 			// Declare the interface of the enum type:
-			code.Type().Id(interfaceTypeName).Interface(
+			code.Type().Id(enumTypeName).Interface(
 				Id(interfaceMethodName).Call(),
 			).Line().Line()
 
@@ -491,10 +468,10 @@ func genTypeDef(idl *IDL, withDiscriminator *[8]byte, def IdlTypeDef) Code {
 
 				// Declare the method to implement the parent enum interface:
 				if variant.IsUint8() {
-					code.Func().Params(Id("_").Id(variantTypeNameComplex)).Id(interfaceMethodName).Params().Block().Line().Line()
+					code.Func().Params(Id("_").Op("*").Id(variantTypeNameComplex)).Id(interfaceMethodName).Params().Block().Line().Line()
 				} else {
 					// .Op("*") why had used pointer receiver?
-					code.Func().Params(Id("_").Id(variantTypeNameComplex)).Id(interfaceMethodName).Params().Block().Line().Line()
+					code.Func().Params(Id("_").Op("*").Id(variantTypeNameComplex)).Id(interfaceMethodName).Params().Block().Line().Line()
 				}
 			}
 
@@ -521,89 +498,6 @@ func formatInterfaceMethodName(enumTypeName string) string {
 
 func formatBuilderFuncName(insExportedName string) string {
 	return "New" + insExportedName + "InstructionBuilder"
-}
-
-func genMarshalWithEncoder_enum(
-	receiverTypeName string,
-	variants *IdlEnumVariantSlice,
-) Code {
-	code := Empty()
-	{
-		code.Func().Params(Id("obj").Id(receiverTypeName)).Id("MarshalWithEncoder").
-			Params(
-				ListFunc(func(params *Group) {
-					// Parameters:
-					params.Id("encoder").Op("*").Qual(PkgDfuseBinary, "Encoder")
-				}),
-			).
-			Params(
-				ListFunc(func(results *Group) {
-					// Results:
-					results.Err().Error()
-				}),
-			).BlockFunc(func(body *Group) {
-			body.List(Id("tmp")).Op(":=").Id(formatEnumContainerName(receiverTypeName)).Block()
-			body.Switch(Id("realvalue").Op(":=").Id("obj").Dot("Value").Op(".").Parens(Type())).
-				BlockFunc(func(switchGroup *Group) {
-					if variants != nil {
-						for variantIndex, variant := range variants.GetEnumVariantTypeName() {
-							switchGroup.Case(Id(formatComplexEnumVariantTypeName(receiverTypeName, variant))).
-								BlockFunc(func(caseGroup *Group) {
-									caseGroup.Id("tmp").Dot("Enum").Op("=").Lit(variantIndex)
-									caseGroup.Id("tmp").Dot(ToCamel(variant)).Op("=").Id("realvalue")
-								})
-						}
-					}
-				})
-			body.Return(Id("encoder").Dot("Encode").Call(Id("tmp")))
-		})
-	}
-	return code
-}
-
-func genUnmarshalWithDecoder_enum(
-	receiverTypeName string,
-	variants *IdlEnumVariantSlice,
-) Code {
-	code := Empty()
-	{
-		code.Func().Params(Id("obj").Op("*").Id(receiverTypeName)).Id("UnmarshalWithDecoder").
-			Params(
-				ListFunc(func(params *Group) {
-					// Parameters:
-					params.Id("decoder").Op("*").Qual(PkgDfuseBinary, "Decoder")
-				}),
-			).
-			Params(
-				ListFunc(func(results *Group) {
-					// Results:
-					results.Err().Error()
-				}),
-			).BlockFunc(func(body *Group) {
-			body.List(Id("tmp")).Op(":=").New(Id(formatEnumContainerName(receiverTypeName)))
-			body.Err().Op("=").Id("decoder").Dot("Decode").Call(Id("tmp"))
-			body.If(
-				Err().Op("!=").Nil(),
-			).Block(
-				Return(Err()),
-			)
-			body.Switch(Id("tmp").Dot("Enum")).
-				BlockFunc(func(switchGroup *Group) {
-					for variantIndex, variantName := range variants.GetEnumVariantTypeName() {
-						switchGroup.Case(Lit(variantIndex)).
-							BlockFunc(func(caseGroup *Group) {
-								caseGroup.Id("obj").Dot("Value").Op("=").Id("tmp").Dot(ToCamel(variantName))
-							})
-					}
-					switchGroup.Default().
-						BlockFunc(func(caseGroup *Group) {
-							caseGroup.Return(Qual("fmt", "Errorf").Call(Lit("unknown enum index: %v"), Id("tmp").Dot("Enum")))
-						})
-				})
-			body.Return(Nil())
-		})
-	}
-	return code
 }
 
 func genMarshalWithEncoder_struct(
@@ -647,49 +541,81 @@ func genMarshalWithEncoder_struct(
 					} else {
 						body.Commentf("Serialize `%s` param:", exportedArgName)
 					}
-					if field.Type.IsIdlTypeOption() {
-						if checkNil {
-							body.BlockFunc(func(optGroup *Group) {
-								// if nil:
-								optGroup.If(Id("obj").Dot(ToCamel(field.Name)).Op("==").Nil()).Block(
-									Err().Op("=").Id("encoder").Dot("WriteBool").Call(False()),
-									If(Err().Op("!=").Nil()).Block(
-										Return(Err()),
-									),
-								).Else().Block(
-									Err().Op("=").Id("encoder").Dot("WriteBool").Call(True()),
-									If(Err().Op("!=").Nil()).Block(
-										Return(Err()),
-									),
-									Err().Op("=").Id("encoder").Dot("Encode").Call(Id("obj").Dot(exportedArgName)),
-									If(Err().Op("!=").Nil()).Block(
-										Return(Err()),
-									),
-								)
-							})
-						} else {
-							body.BlockFunc(func(optGroup *Group) {
-								// TODO: make optional fields of accounts a pointer.
-								// Write as if not nil:
-								optGroup.Err().Op("=").Id("encoder").Dot("WriteBool").Call(True())
-								optGroup.If(Err().Op("!=").Nil()).Block(
-									Return(Err()),
-								)
-								optGroup.Err().Op("=").Id("encoder").Dot("Encode").Call(Id("obj").Dot(exportedArgName))
-								optGroup.If(Err().Op("!=").Nil()).Block(
-									Return(Err()),
-								)
-							})
-						}
 
+					if isComplexEnum(field.Type) {
+						enumTypeName := field.Type.GetIdlTypeDefined().Defined.Name
+						body.BlockFunc(func(argBody *Group) {
+							argBody.List(Id("tmp")).Op(":=").Id(formatEnumContainerName(enumTypeName)).Block()
+							argBody.Switch(Id("realvalue").Op(":=").Id("obj").Dot(exportedArgName).Op(".").Parens(Type())).
+								BlockFunc(func(switchGroup *Group) {
+									// TODO: maybe it's from idl.Accounts ???
+									interfaceType := idl.Types.GetByName(enumTypeName)
+									for variantIndex, variant := range *interfaceType.Type.Variants {
+										variantTypeNameStruct := formatComplexEnumVariantTypeName(enumTypeName, variant.Name)
+
+										switchGroup.Case(Op("*").Id(variantTypeNameStruct)).
+											BlockFunc(func(caseGroup *Group) {
+												caseGroup.Id("tmp").Dot("Enum").Op("=").Lit(variantIndex)
+												caseGroup.Id("tmp").Dot(ToCamel(variant.Name)).Op("=").Op("*").Id("realvalue")
+											})
+									}
+								})
+
+							argBody.Err().Op(":=").Id("encoder").Dot("Encode").Call(Id("tmp"))
+
+							argBody.If(
+								Err().Op("!=").Nil(),
+							).Block(
+								Return(Err()),
+							)
+
+						})
 					} else {
-						body.Err().Op("=").Id("encoder").Dot("Encode").Call(Id("obj").Dot(exportedArgName))
-						body.If(Err().Op("!=").Nil()).Block(
-							Return(Err()),
-						)
+						if field.Type.IsIdlTypeOption() {
+							if checkNil {
+								body.BlockFunc(func(optGroup *Group) {
+									// if nil:
+									optGroup.If(Id("obj").Dot(ToCamel(field.Name)).Op("==").Nil()).Block(
+										Err().Op("=").Id("encoder").Dot("WriteBool").Call(False()),
+										If(Err().Op("!=").Nil()).Block(
+											Return(Err()),
+										),
+									).Else().Block(
+										Err().Op("=").Id("encoder").Dot("WriteBool").Call(True()),
+										If(Err().Op("!=").Nil()).Block(
+											Return(Err()),
+										),
+										Err().Op("=").Id("encoder").Dot("Encode").Call(Id("obj").Dot(exportedArgName)),
+										If(Err().Op("!=").Nil()).Block(
+											Return(Err()),
+										),
+									)
+								})
+							} else {
+								body.BlockFunc(func(optGroup *Group) {
+									// TODO: make optional fields of accounts a pointer.
+									// Write as if not nil:
+									optGroup.Err().Op("=").Id("encoder").Dot("WriteBool").Call(True())
+									optGroup.If(Err().Op("!=").Nil()).Block(
+										Return(Err()),
+									)
+									optGroup.Err().Op("=").Id("encoder").Dot("Encode").Call(Id("obj").Dot(exportedArgName))
+									optGroup.If(Err().Op("!=").Nil()).Block(
+										Return(Err()),
+									)
+								})
+							}
+
+						} else {
+							body.Err().Op("=").Id("encoder").Dot("Encode").Call(Id("obj").Dot(exportedArgName))
+							body.If(Err().Op("!=").Nil()).Block(
+								Return(Err()),
+							)
+						}
 					}
+
 				}
-				//}
+
 				body.Return(Nil())
 			})
 	}
@@ -748,36 +674,84 @@ func genUnmarshalWithDecoder_struct(
 					} else {
 						body.Commentf("Deserialize `%s`:", exportedArgName)
 					}
-					if field.Type.IsIdlTypeOption() {
-						body.BlockFunc(func(optGroup *Group) {
-							// if nil:
-							optGroup.List(Id("ok"), Err()).Op(":=").Id("decoder").Dot("ReadBool").Call()
-							optGroup.If(Err().Op("!=").Nil()).Block(
+
+					if isComplexEnum(field.Type) {
+						enumName := field.Type.GetIdlTypeDefined().Defined.Name
+						body.BlockFunc(func(argBody *Group) {
+
+							argBody.List(Id("tmp")).Op(":=").New(Id(formatEnumContainerName(enumName)))
+
+							argBody.Err().Op(":=").Id("decoder").Dot("Decode").Call(Id("tmp"))
+
+							argBody.If(
+								Err().Op("!=").Nil(),
+							).Block(
 								Return(Err()),
 							)
-							optGroup.If(Id("ok")).Block(
-								Err().Op("=").Id("decoder").Dot("Decode").Call(Op("&").Id("obj").Dot(exportedArgName)),
-								If(Err().Op("!=").Nil()).Block(
-									Return(Err()),
-								),
-							)
+
+							argBody.Switch(Id("tmp").Dot("Enum")).
+								BlockFunc(func(switchGroup *Group) {
+									interfaceType := idl.Types.GetByName(enumName)
+									for variantIndex, variant := range *interfaceType.Type.Variants {
+										variantTypeNameComplex := formatComplexEnumVariantTypeName(enumName, variant.Name)
+
+										if variant.IsUint8() {
+											// TODO: the actual value is not important;
+											//  what's important is the type.
+											switchGroup.Case(Lit(variantIndex)).
+												BlockFunc(func(caseGroup *Group) {
+													caseGroup.Id("obj").Dot(exportedArgName).Op("=").
+														Parens(Op("*").Id(variantTypeNameComplex)).
+														Parens(Op("&").Id("tmp").Dot("Enum"))
+												})
+										} else {
+											switchGroup.Case(Lit(variantIndex)).
+												BlockFunc(func(caseGroup *Group) {
+													caseGroup.Id("obj").Dot(exportedArgName).Op("=").Op("&").Id("tmp").Dot(ToCamel(variant.Name))
+												})
+										}
+									}
+									switchGroup.Default().
+										BlockFunc(func(caseGroup *Group) {
+											caseGroup.Return(Qual("fmt", "Errorf").Call(Lit("unknown enum index: %v"), Id("tmp").Dot("Enum")))
+										})
+								})
+
 						})
 					} else {
-						body.Err().Op("=").Id("decoder").Dot("Decode").Call(Op("&").Id("obj").Dot(exportedArgName))
-						body.If(Err().Op("!=").Nil()).Block(
-							Return(Err()),
-						)
+						if field.Type.IsIdlTypeOption() {
+							body.BlockFunc(func(optGroup *Group) {
+								optGroup.If(Op("!").Id("decoder").Dot("HasRemaining").Call()).Block(
+									Return(Nil()),
+								).Line()
+								// if nil:
+								optGroup.List(Id("ok"), Err()).Op(":=").Id("decoder").Dot("ReadBool").Call()
+								optGroup.If(Err().Op("!=").Nil()).Block(
+									Return(Err()),
+								)
+								optGroup.If(Id("ok")).Block(
+									Err().Op("=").Id("decoder").Dot("Decode").Call(Op("&").Id("obj").Dot(exportedArgName)),
+									If(Err().Op("!=").Nil()).Block(
+										Return(Err()),
+									),
+								)
+							})
+						} else {
+							body.Err().Op("=").Id("decoder").Dot("Decode").Call(Op("&").Id("obj").Dot(exportedArgName))
+							body.If(Err().Op("!=").Nil()).Block(
+								Return(Err()),
+							)
+						}
 					}
 				}
-				//}
+
 				body.Return(Nil())
 			})
 	}
 	return code
 }
-
 func formatComplexEnumVariantTypeName(enumTypeName string, variantName string) string {
-	return ToCamel(Sf("%s_%s_Tuple", enumTypeName, variantName))
+	return ToCamel(Sf("%s_%s", enumTypeName, variantName))
 }
 
 func formatSimpleEnumVariantName(variantName string, enumTypeName string) string {

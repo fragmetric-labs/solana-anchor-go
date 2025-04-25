@@ -279,8 +279,6 @@ func GenerateClientFromProgramIDL(idl IDL) ([]*FileWrapper, error) {
 			args = append(args, idlFieldArg)
 		}
 
-		// fmt.Println(RedBG(instruction.Name))
-
 		{
 			code := Empty().Line().Line()
 
@@ -464,7 +462,7 @@ func GenerateClientFromProgramIDL(idl IDL) ([]*FileWrapper, error) {
 						body.Id("inst").Dot(exportedArgName).Op("=").
 							Add(func() Code {
 								if isComplexEnum(arg.Type) {
-									return Op("&")
+									return nil
 								}
 								return Op("&")
 							}()).
