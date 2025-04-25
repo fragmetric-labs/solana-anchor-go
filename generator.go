@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+
 	. "github.com/dave/jennifer/jen"
 	"github.com/davecgh/go-spew/spew"
 	bin "github.com/gagliardetto/binary"
@@ -17,6 +18,7 @@ const (
 	PkgGoFuzz         = "github.com/gagliardetto/gofuzz"
 	PkgMsgpack        = "github.com/vmihailenco/msgpack/v5"
 	PkgTestifyRequire = "github.com/stretchr/testify/require"
+	PkgAgRpc          = "github.com/gagliardetto/solana-go/rpc"
 )
 
 type FileWrapper struct {
