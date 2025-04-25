@@ -65,6 +65,12 @@ type IdlInstruction struct {
 	Docs          []string            `json:"docs"` // @custom
 	Accounts      IdlAccountItemSlice `json:"accounts"`
 	Args          []IdlField          `json:"args"`
+	Discriminant  *IdlDiscriminantDef `json:"discriminant,omitempty"`
+}
+
+type IdlDiscriminantDef struct {
+	Type  string `json:"type"`
+	Value uint   `json:"value"`
 }
 
 type IdlAccountItemSlice []IdlAccountItem

@@ -25,10 +25,6 @@ import (
 
 const generatedDir = "generated"
 
-// TODO:
-// - tests where type has field that is a complex enum (represented as an interface): assign a random concrete value from the possible enum variants.
-// - when printing tree, check for len before accessing array indexes.
-
 func main() {
 	conf.Encoding = EncodingBorsh
 	conf.TypeID = TypeIDAnchor
@@ -1850,7 +1846,7 @@ func genProgramBoilerplate(idl IDL) (*File, error) {
 											insName := ToCamel(instruction.Name)
 											insExportedName := ToCamel(instruction.Name)
 											variantBlock.Block(
-												List(Lit(insName), Parens(Op("*").Id(insExportedName)).Parens(Nil())).Op(","),
+												List(Id("Name").Op(":").Lit(insName), Id("Type").Op(":").Parens(Op("*").Id(insExportedName)).Parens(Nil())).Op(","),
 											).Op(",")
 										}
 									}).Op(",").Line()
