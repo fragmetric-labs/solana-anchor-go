@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -17,8 +16,8 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/gagliardetto/solana-go"
 
+	"github.com/alivers/solana-anchor-go/sighash"
 	. "github.com/dave/jennifer/jen"
-	"github.com/fragmetric-labs/solana-anchor-go/sighash"
 	bin "github.com/gagliardetto/binary"
 	. "github.com/gagliardetto/utilz"
 	"golang.org/x/mod/modfile"
@@ -192,7 +191,7 @@ func main() {
 					MustAbs(gomodFilepath),
 				)
 				// Write `go.mod` file:
-				err = ioutil.WriteFile(gomodFilepath, mfBytes, 0666)
+				err = os.WriteFile(gomodFilepath, mfBytes, 0666)
 				if err != nil {
 					panic(err)
 				}
@@ -307,307 +306,20 @@ func DecodeInstructions(message *ag_solanago.Message) (instructions []*Instructi
 	}
 
 	defs := make(map[string]IdlTypeDef)
+	nameOccupied := make(map[string]bool)
+	skipTypesGenration := make(map[string]bool)
+	// Declare types from IDL:
 	{
-		file := NewGoFile(idl.Metadata.Name, true)
-		// Declare types from IDL:
 		for _, typ := range idl.Types {
 			defs[typ.Name] = typ
-			file.Add(genTypeDef(&idl, nil, IdlTypeDef{
-				Name: typ.Name,
-				Type: typ.Type,
-			}))
 		}
-		files = append(files, &FileWrapper{
-			Name: "types",
-			File: file,
-		})
-	}
-
-	{
-		file := NewGoFile(idl.Metadata.Name, true)
-		// Declare account layouts from IDL:
-		for _, acc := range idl.Accounts {
-			if _, ok := defs[acc.Name]; ok {
-				file.Add(genTypeDef(&idl, acc.Discriminator, IdlTypeDef{
-					Name: defs[acc.Name].Name + "Account",
-					Type: defs[acc.Name].Type,
-				}))
-			} else {
-				panic(`not implemented - only IDL from ("anchor": ">=0.30.0") is available`)
-			}
-		}
-		files = append(files, &FileWrapper{
-			Name: "accounts",
-			File: file,
-		})
-	}
-
-	{
-		file := NewGoFile(idl.Metadata.Name, true)
-
-		// Declare account layouts from IDL:
-		for _, evt := range idl.Events {
-			if _, ok := defs[evt.Name]; ok {
-				eventDataTypeName := defs[evt.Name].Name + "EventData"
-				file.Add(genTypeDef(&idl, evt.Discriminator, IdlTypeDef{
-					Name: eventDataTypeName,
-					Type: defs[evt.Name].Type,
-				}))
-				file.Add(Func().Params(Op("*").Id(eventDataTypeName)).Id("isEventData").Params().Block())
-			} else {
-				panic(`not implemented - only IDL from ("anchor": ">=0.30.0") is available`)
-			}
-		}
-
-		file.Add(Empty().Var().Id("eventTypes").Op("=").Map(Index(Lit(8)).Byte()).Qual("reflect", "Type").Values(DictFunc(func(d Dict) {
-			for _, evt := range idl.Events {
-				if def, ok := defs[evt.Name]; ok {
-					d[Id(def.Name+"EventDataDiscriminator")] = Id("reflect.TypeOf(" + def.Name + "EventData{})")
-				}
-			}
-		})))
-
-		file.Add(Empty().Var().Id("eventNames").Op("=").Map(Index(Lit(8)).Byte()).String().Values(DictFunc(func(d Dict) {
-			for _, evt := range idl.Events {
-				if def, ok := defs[evt.Name]; ok {
-					d[Id(def.Name+"EventDataDiscriminator")] = Lit(def.Name)
-				}
-			}
-		})))
-
-		// TODO: refactor it
-		// to generate import statements
-		file.Add(Empty().Var().Defs(Id("_").Op("*").Qual("strings", "Builder").Op("=").Nil()))
-		file.Add(Empty().Var().Defs(Id("_").Op("*").Qual("encoding/base64", "Encoding").Op("=").Nil()))
-		file.Add(Empty().Var().Defs(Id("_").Op("*").Qual(PkgDfuseBinary, "Decoder").Op("=").Nil())) // TODO: ..
-		file.Add(Empty().Var().Defs(Id("_").Op("*").Qual("github.com/gagliardetto/solana-go/rpc", "GetTransactionResult").Op("=").Nil()))
-		file.Add(Empty().Var().Defs(Id("_").Op("*").Qual("github.com/mr-tron/base58", "Alphabet").Op("=").Nil()))
-
-		file.Add(Empty().Id(`
-type Event struct {
-	Name string
-	Data EventData
-}
-
-type EventData interface {
-	UnmarshalWithDecoder(decoder *ag_binary.Decoder) error
-	isEventData()
-}
-
-const eventLogPrefix = "Program data: "
-
-func DecodeEvents(txData *ag_rpc.GetTransactionResult, targetProgramId ag_solanago.PublicKey, getAddressTables func(altAddresses []ag_solanago.PublicKey) (tables map[ag_solanago.PublicKey]ag_solanago.PublicKeySlice, err error)) (evts []*Event, err error) {
-	var tx *ag_solanago.Transaction
-	if tx, err = txData.Transaction.GetTransaction(); err != nil {
-		return
-	}
-
-	altAddresses := make([]ag_solanago.PublicKey, len(tx.Message.AddressTableLookups))
-	for i, alt := range tx.Message.AddressTableLookups {
-		altAddresses[i] = alt.AccountKey
-	}
-	if len(altAddresses) > 0 {
-		var tables map[ag_solanago.PublicKey]ag_solanago.PublicKeySlice
-		if tables, err = getAddressTables(altAddresses); err != nil {
-			return
-		}
-		tx.Message.SetAddressTables(tables)
-		if err = tx.Message.ResolveLookups(); err != nil {
-			return
-		}
-	}
-
-	var base64Binaries [][]byte
-	logMessageEventBinaries, err := decodeEventsFromLogMessage(txData.Meta.LogMessages)
-	if err != nil {
-		return
-	}
-
-	emitedCPIEventBinaries, err := decodeEventsFromEmitCPI(txData.Meta.InnerInstructions, tx.Message.AccountKeys, targetProgramId)
-	if err != nil {
-		return
-	}
-
-	base64Binaries = append(base64Binaries, logMessageEventBinaries...)
-	base64Binaries = append(base64Binaries, emitedCPIEventBinaries...)
-	evts, err = parseEvents(base64Binaries)
-	return
-}
-
-func decodeEventsFromLogMessage(logMessages []string) (eventBinaries [][]byte, err error) {
-	for _, log := range logMessages {
-		if strings.HasPrefix(log, eventLogPrefix) {
-			eventBase64 := log[len(eventLogPrefix):]
-
-			var eventBinary []byte
-			if eventBinary, err = base64.StdEncoding.DecodeString(eventBase64); err != nil {
-				err = fmt.Errorf("failed to decode logMessage event: %s", eventBase64)
-				return
-			}
-			eventBinaries = append(eventBinaries, eventBinary)
-		}
-	}
-	return
-}
-
-func decodeEventsFromEmitCPI(InnerInstructions []ag_rpc.InnerInstruction, accountKeys ag_solanago.PublicKeySlice, targetProgramId ag_solanago.PublicKey) (eventBinaries [][]byte, err error) {
-	for _, parsedIx := range InnerInstructions {
-		for _, ix := range parsedIx.Instructions {
-			if accountKeys[ix.ProgramIDIndex] != targetProgramId {
-				continue
-			}
-
-			var ixData []byte
-			if ixData, err = ag_base58.Decode(ix.Data.String()); err != nil {
-				return
-			}
-			if len(ixData) < 8 {
-				continue
-			}
-
-			eventBase64 := base64.StdEncoding.EncodeToString(ixData[8:])
-			var eventBinary []byte
-			if eventBinary, err = base64.StdEncoding.DecodeString(eventBase64); err != nil {
-				return
-			}
-			eventBinaries = append(eventBinaries, eventBinary)
-		}
-	}
-	return
-}
-
-func parseEvents(base64Binaries [][]byte) (evts []*Event, err error) {
-	decoder := ag_binary.NewDecoderWithEncoding(nil, ag_binary.EncodingBorsh)
-
-	for _, eventBinary := range base64Binaries {
-		if len(eventBinary) < 8 {
-			continue
-		}
-		eventDiscriminator := ag_binary.TypeID(eventBinary[:8])
-		if eventType, ok := eventTypes[eventDiscriminator]; ok {
-			eventData := reflect.New(eventType).Interface().(EventData)
-			decoder.Reset(eventBinary)
-			if err = eventData.UnmarshalWithDecoder(decoder); err != nil {
-				err = fmt.Errorf("failed to unmarshal event %s: %w", eventType.String(), err)
-				return
-			}
-			evts = append(evts, &Event{
-				Name: eventNames[eventDiscriminator],
-				Data: eventData,
-			})
-		}
-	}
-	return
-}
-`))
-
-		files = append(files, &FileWrapper{
-			Name: "events",
-			File: file,
-		})
-	}
-
-	{
-		// define custom errors
-		file := NewGoFile(idl.Metadata.Name, true)
-
-		// to generate import statements
-		file.Add(Var().Defs(
-			Id("_").Op("*").Qual("encoding/json", "Encoder").Op("=").Nil(),
-			Id("_").Op("*").Qual("github.com/gagliardetto/solana-go/rpc/jsonrpc", "RPCError").Op("=").Nil(),
-			Id("_").Qual("fmt", "Formatter").Op("=").Nil(),
-			Id("_").Op("=").Qual("errors", "ErrUnsupported"),
-		))
-
-		file.Add(Var().DefsFunc(func(group *Group) {
-			errDict := Dict{}
-			for _, errDef := range idl.Errors {
-				name := "Err" + ToCamel(errDef.Name)
-				group.Add(Id(name).Op("=").Op("&").Id("customErrorDef").Values(Dict{
-					Id("code"): Lit(errDef.Code),
-					Id("name"): Lit(errDef.Name),
-					Id("msg"):  Lit(errDef.Msg),
-				}))
-				errDict[Lit(errDef.Code)] = Id(name)
-			}
-			group.Add(Id("Errors").Op("=").Map(Int()).Id("CustomError").Values(errDict))
-		}))
-
-		file.Add(Empty().Id(`
-type CustomError interface {
-	Code() int
-	Name() string
-	Error() string
-}
-
-type customErrorDef struct {
-	code int
-	name string
-	msg  string
-}
-
-func (e *customErrorDef) Code() int {
-	return e.code
-}
-
-func (e *customErrorDef) Name() string {
-	return e.name
-}
-
-func (e *customErrorDef) Error() string {
-	return fmt.Sprintf("%s(%d): %s", e.name, e.code, e.msg)
-}
-
-func DecodeCustomError(rpcErr error) (err error, ok bool) {
-	if errCode, o := decodeErrorCode(rpcErr); o {
-		if customErr, o := Errors[errCode]; o {
-			err = customErr
-			ok = true
-			return
-		}
-	}
-	return
-}
-
-func decodeErrorCode(rpcErr error) (errorCode int, ok bool) {
-	var jErr *ag_jsonrpc.RPCError
-	if errors.As(rpcErr, &jErr) && jErr.Data != nil {
-		if root, o := jErr.Data.(map[string]interface{}); o {
-			if rootErr, o := root["err"].(map[string]interface{}); o {
-				if rootErrInstructionError, o := rootErr["InstructionError"]; o {
-					if rootErrInstructionErrorItems, o := rootErrInstructionError.([]interface{}); o {
-						if len(rootErrInstructionErrorItems) == 2 {
-							if v, o := rootErrInstructionErrorItems[1].(map[string]interface{}); o {
-								if v2, o := v["Custom"].(json.Number); o {
-									if code, err := v2.Int64(); err == nil {
-										ok = true
-										errorCode = int(code)
-									}
-								} else if v2, o := v["Custom"].(float64); o {
-									ok = true
-									errorCode = int(v2)
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-	return
-}
-`))
-
-		files = append(files, &FileWrapper{
-			Name: "errors",
-			File: file,
-		})
 	}
 
 	// Instructions:
 	for _, instruction := range idl.Instructions {
 		file := NewGoFile(idl.Metadata.Name, true)
 		insExportedName := ToCamel(instruction.Name)
+		nameOccupied[insExportedName] = true
 		var args []IdlField
 		for _, arg := range instruction.Args {
 			idlFieldArg := IdlField{
@@ -1336,6 +1048,315 @@ func decodeErrorCode(rpcErr error) (errorCode int, ok bool) {
 		////
 		files = append(files, &FileWrapper{
 			Name: strings.ToLower(insExportedName),
+			File: file,
+		})
+	}
+
+	// Declare accounts:
+	{
+		file := NewGoFile(idl.Metadata.Name, true)
+		// Declare account layouts from IDL:
+		for _, acc := range idl.Accounts {
+			if _, ok := defs[acc.Name]; ok {
+				skipTypesGenration[acc.Name] = true
+				file.Add(genTypeDef(&idl, acc.Discriminator, IdlTypeDef{
+					Name: defs[acc.Name].Name + "Account",
+					Type: defs[acc.Name].Type,
+				}))
+			} else {
+				panic(`not implemented - only IDL from ("anchor": ">=0.30.0") is available`)
+			}
+		}
+		files = append(files, &FileWrapper{
+			Name: "accounts",
+			File: file,
+		})
+	}
+
+	// Declare events:
+	{
+		file := NewGoFile(idl.Metadata.Name, true)
+
+		// Declare account layouts from IDL:
+		for _, evt := range idl.Events {
+			if _, ok := defs[evt.Name]; ok {
+				skipTypesGenration[evt.Name] = true
+				eventDataTypeName := defs[evt.Name].Name + "EventData"
+				file.Add(genTypeDef(&idl, evt.Discriminator, IdlTypeDef{
+					Name: eventDataTypeName,
+					Type: defs[evt.Name].Type,
+				}))
+				file.Add(Func().Params(Op("*").Id(eventDataTypeName)).Id("isEventData").Params().Block())
+			} else {
+				panic(`not implemented - only IDL from ("anchor": ">=0.30.0") is available`)
+			}
+		}
+
+		file.Add(Empty().Var().Id("eventTypes").Op("=").Map(Index(Lit(8)).Byte()).Qual("reflect", "Type").Values(DictFunc(func(d Dict) {
+			for _, evt := range idl.Events {
+				if def, ok := defs[evt.Name]; ok {
+					d[Id(def.Name+"EventDataDiscriminator")] = Id("reflect.TypeOf(" + def.Name + "EventData{})")
+				}
+			}
+		})))
+
+		file.Add(Empty().Var().Id("eventNames").Op("=").Map(Index(Lit(8)).Byte()).String().Values(DictFunc(func(d Dict) {
+			for _, evt := range idl.Events {
+				if def, ok := defs[evt.Name]; ok {
+					d[Id(def.Name+"EventDataDiscriminator")] = Lit(def.Name)
+				}
+			}
+		})))
+
+		// TODO: refactor it
+		// to generate import statements
+		file.Add(Empty().Var().Defs(Id("_").Op("*").Qual("strings", "Builder").Op("=").Nil()))
+		file.Add(Empty().Var().Defs(Id("_").Op("*").Qual("encoding/base64", "Encoding").Op("=").Nil()))
+		file.Add(Empty().Var().Defs(Id("_").Op("*").Qual(PkgDfuseBinary, "Decoder").Op("=").Nil())) // TODO: ..
+		file.Add(Empty().Var().Defs(Id("_").Op("*").Qual("github.com/gagliardetto/solana-go/rpc", "GetTransactionResult").Op("=").Nil()))
+		file.Add(Empty().Var().Defs(Id("_").Op("*").Qual("github.com/mr-tron/base58", "Alphabet").Op("=").Nil()))
+
+		file.Add(Empty().Id(`
+type Event struct {
+	Name string
+	Data EventData
+}
+
+type EventData interface {
+	UnmarshalWithDecoder(decoder *ag_binary.Decoder) error
+	isEventData()
+}
+
+const eventLogPrefix = "Program data: "
+
+func DecodeEvents(txData *ag_rpc.GetTransactionResult, targetProgramId ag_solanago.PublicKey, getAddressTables func(altAddresses []ag_solanago.PublicKey) (tables map[ag_solanago.PublicKey]ag_solanago.PublicKeySlice, err error)) (evts []*Event, err error) {
+	var tx *ag_solanago.Transaction
+	if tx, err = txData.Transaction.GetTransaction(); err != nil {
+		return
+	}
+
+	altAddresses := make([]ag_solanago.PublicKey, len(tx.Message.AddressTableLookups))
+	for i, alt := range tx.Message.AddressTableLookups {
+		altAddresses[i] = alt.AccountKey
+	}
+	if len(altAddresses) > 0 {
+		var tables map[ag_solanago.PublicKey]ag_solanago.PublicKeySlice
+		if tables, err = getAddressTables(altAddresses); err != nil {
+			return
+		}
+		tx.Message.SetAddressTables(tables)
+		if err = tx.Message.ResolveLookups(); err != nil {
+			return
+		}
+	}
+
+	var base64Binaries [][]byte
+	logMessageEventBinaries, err := decodeEventsFromLogMessage(txData.Meta.LogMessages)
+	if err != nil {
+		return
+	}
+
+	emitedCPIEventBinaries, err := decodeEventsFromEmitCPI(txData.Meta.InnerInstructions, tx.Message.AccountKeys, targetProgramId)
+	if err != nil {
+		return
+	}
+
+	base64Binaries = append(base64Binaries, logMessageEventBinaries...)
+	base64Binaries = append(base64Binaries, emitedCPIEventBinaries...)
+	evts, err = parseEvents(base64Binaries)
+	return
+}
+
+func decodeEventsFromLogMessage(logMessages []string) (eventBinaries [][]byte, err error) {
+	for _, log := range logMessages {
+		if strings.HasPrefix(log, eventLogPrefix) {
+			eventBase64 := log[len(eventLogPrefix):]
+
+			var eventBinary []byte
+			if eventBinary, err = base64.StdEncoding.DecodeString(eventBase64); err != nil {
+				err = fmt.Errorf("failed to decode logMessage event: %s", eventBase64)
+				return
+			}
+			eventBinaries = append(eventBinaries, eventBinary)
+		}
+	}
+	return
+}
+
+func decodeEventsFromEmitCPI(InnerInstructions []ag_rpc.InnerInstruction, accountKeys ag_solanago.PublicKeySlice, targetProgramId ag_solanago.PublicKey) (eventBinaries [][]byte, err error) {
+	for _, parsedIx := range InnerInstructions {
+		for _, ix := range parsedIx.Instructions {
+			if accountKeys[ix.ProgramIDIndex] != targetProgramId {
+				continue
+			}
+
+			var ixData []byte
+			if ixData, err = ag_base58.Decode(ix.Data.String()); err != nil {
+				return
+			}
+			if len(ixData) < 8 {
+				continue
+			}
+
+			eventBase64 := base64.StdEncoding.EncodeToString(ixData[8:])
+			var eventBinary []byte
+			if eventBinary, err = base64.StdEncoding.DecodeString(eventBase64); err != nil {
+				return
+			}
+			eventBinaries = append(eventBinaries, eventBinary)
+		}
+	}
+	return
+}
+
+func parseEvents(base64Binaries [][]byte) (evts []*Event, err error) {
+	decoder := ag_binary.NewDecoderWithEncoding(nil, ag_binary.EncodingBorsh)
+
+	for _, eventBinary := range base64Binaries {
+		if len(eventBinary) < 8 {
+			continue
+		}
+		eventDiscriminator := ag_binary.TypeID(eventBinary[:8])
+		if eventType, ok := eventTypes[eventDiscriminator]; ok {
+			eventData := reflect.New(eventType).Interface().(EventData)
+			decoder.Reset(eventBinary)
+			if err = eventData.UnmarshalWithDecoder(decoder); err != nil {
+				err = fmt.Errorf("failed to unmarshal event %s: %w", eventType.String(), err)
+				return
+			}
+			evts = append(evts, &Event{
+				Name: eventNames[eventDiscriminator],
+				Data: eventData,
+			})
+		}
+	}
+	return
+}
+`))
+
+		files = append(files, &FileWrapper{
+			Name: "events",
+			File: file,
+		})
+	}
+
+	// Declare errors:
+	{
+		// define custom errors
+		file := NewGoFile(idl.Metadata.Name, true)
+
+		// to generate import statements
+		file.Add(Var().Defs(
+			Id("_").Op("*").Qual("encoding/json", "Encoder").Op("=").Nil(),
+			Id("_").Op("*").Qual("github.com/gagliardetto/solana-go/rpc/jsonrpc", "RPCError").Op("=").Nil(),
+			Id("_").Qual("fmt", "Formatter").Op("=").Nil(),
+			Id("_").Op("=").Qual("errors", "ErrUnsupported"),
+		))
+
+		file.Add(Var().DefsFunc(func(group *Group) {
+			errDict := Dict{}
+			for _, errDef := range idl.Errors {
+				name := "Err" + ToCamel(errDef.Name)
+				group.Add(Id(name).Op("=").Op("&").Id("customErrorDef").Values(Dict{
+					Id("code"): Lit(errDef.Code),
+					Id("name"): Lit(errDef.Name),
+					Id("msg"):  Lit(errDef.Msg),
+				}))
+				errDict[Lit(errDef.Code)] = Id(name)
+			}
+			group.Add(Id("Errors").Op("=").Map(Int()).Id("CustomError").Values(errDict))
+		}))
+
+		file.Add(Empty().Id(`
+type CustomError interface {
+	Code() int
+	Name() string
+	Error() string
+}
+
+type customErrorDef struct {
+	code int
+	name string
+	msg  string
+}
+
+func (e *customErrorDef) Code() int {
+	return e.code
+}
+
+func (e *customErrorDef) Name() string {
+	return e.name
+}
+
+func (e *customErrorDef) Error() string {
+	return fmt.Sprintf("%s(%d): %s", e.name, e.code, e.msg)
+}
+
+func DecodeCustomError(rpcErr error) (err error, ok bool) {
+	if errCode, o := decodeErrorCode(rpcErr); o {
+		if customErr, o := Errors[errCode]; o {
+			err = customErr
+			ok = true
+			return
+		}
+	}
+	return
+}
+
+func decodeErrorCode(rpcErr error) (errorCode int, ok bool) {
+	var jErr *ag_jsonrpc.RPCError
+	if errors.As(rpcErr, &jErr) && jErr.Data != nil {
+		if root, o := jErr.Data.(map[string]interface{}); o {
+			if rootErr, o := root["err"].(map[string]interface{}); o {
+				if rootErrInstructionError, o := rootErr["InstructionError"]; o {
+					if rootErrInstructionErrorItems, o := rootErrInstructionError.([]interface{}); o {
+						if len(rootErrInstructionErrorItems) == 2 {
+							if v, o := rootErrInstructionErrorItems[1].(map[string]interface{}); o {
+								if v2, o := v["Custom"].(json.Number); o {
+									if code, err := v2.Int64(); err == nil {
+										ok = true
+										errorCode = int(code)
+									}
+								} else if v2, o := v["Custom"].(float64); o {
+									ok = true
+									errorCode = int(v2)
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	return
+}
+`))
+
+		files = append(files, &FileWrapper{
+			Name: "errors",
+			File: file,
+		})
+	}
+
+	// add types file:
+	{
+		file := NewGoFile(idl.Metadata.Name, true)
+		// Declare types from IDL:
+		for _, typ := range idl.Types {
+			if skipTypesGenration[typ.Name] {
+				continue
+			}
+			typeName := typ.Name
+			if nameOccupied[typeName] {
+				typeName = typ.Name + "_"
+			}
+			file.Add(genTypeDef(&idl, nil, IdlTypeDef{
+				Name: typeName,
+				Type: typ.Type,
+			}))
+		}
+		files = append(files, &FileWrapper{
+			Name: "types",
 			File: file,
 		})
 	}
