@@ -210,9 +210,10 @@ type idlAccountPDA struct {
 }
 
 type idlAccountPDASeed struct {
-	Kind  string `json:"kind"`  // const or account
-	Value []byte `json:"value"` // const
-	Path  string `json:"path,omitempty"`
+	Kind    string `json:"kind"`  // const or account
+	Value   []byte `json:"value"` // const
+	Path    string `json:"path,omitempty"`
+	Account string `json:"account"`
 }
 
 // IdlAccounts is a nested/recursive version of IdlAccount.
