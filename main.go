@@ -1588,6 +1588,7 @@ func genAccountGettersSetters(
 			accessorName := strings.TrimSuffix(formatAccountAccessorName("Find", exportedAccountName), "Account") + "Address"
 
 			seedParamTypes := make(map[string]Code) // Maps var name to its Go type
+			seedParamOrder := []string{} // Maintains order of seed parameters
 			// A slice of functions that will generate the code for appending each seed to the `seeds` slice.
 			seedBodyGen := make([]func(body *Group), len(account.PDA.Seeds))
 
@@ -1612,30 +1613,100 @@ func genAccountGettersSetters(
 						})))
 					}
 				} else if seedDef.Kind == "arg" {
-					paramName := ToLowerCamel(seedDef.Path)
-
-					var argDef *IdlField
-					for i := range instruction.Args {
-						if instruction.Args[i].Name == seedDef.Path {
-							argDef = &instruction.Args[i]
-							break
+					if strings.Contains(seedDef.Path, ".") { // kind: arg, path: param.field
+						parts := strings.Split(seedDef.Path, ".")
+						if len(parts) != 2 {
+							panic(fmt.Sprintf("invalid arg path format: %s", seedDef.Path))
 						}
-					}
-					if argDef == nil {
-						panic(fmt.Sprintf("arg '%s' not found for pda seed", seedDef.Path))
-					}
+						argName, fieldName := parts[0], parts[1]
+						paramName := ToLowerCamel(argName)
 
-					seedParamTypes[paramName] = genTypeName(argDef.Type)
+						var argDef *IdlField
+						// First, try to match by index (more robust approach)
+						// Count the number of arg-kind seeds we've seen so far
+						argSeedIndex := 0
+						for j := 0; j < i; j++ {
+							if account.PDA.Seeds[j].Kind == "arg" {
+								argSeedIndex++
+							}
+						}
+						// Use the arg seed index to get the corresponding instruction arg
+						if argSeedIndex < len(instruction.Args) {
+							argDef = &instruction.Args[argSeedIndex]
+						}
+						
+						// Fallback to name matching if index matching didn't work or failed
+						if argDef == nil {
+							for argIdx := range instruction.Args {
+								if instruction.Args[argIdx].Name == argName {
+									argDef = &instruction.Args[argIdx]
+									break
+								}
+							}
+						}
+						
+						if argDef == nil {
+							panic(fmt.Sprintf("arg '%s' not found for pda seed (tried both index %d and name matching)", argName, argSeedIndex))
+						}
 
-					seedBodyGen[i] = func(body *Group) {
-						body.Commentf("arg: %s", seedDef.Path)
-						body.Add(
-							Block(
-								Id(paramName+"Bytes").Op(",").Err().Op(":=").Qual(PkgDfuseBinary, "MarshalBorsh").Call(Id(paramName)),
-								If(Err().Op("!=").Nil()).Block(Return()),
-								Id("seeds").Op("=").Append(Id("seeds"), Id(paramName+"Bytes")),
-							),
-						)
+						seedParamTypes[paramName] = genTypeName(argDef.Type)
+						seedParamOrder = append(seedParamOrder, paramName)
+
+						seedBodyGen[i] = func(body *Group) {
+							body.Commentf("arg: %s", seedDef.Path)
+							body.Add(
+								Block(
+									Id(paramName+ToCamel(fieldName)+"Bytes").Op(",").Id("marshalErr").Op(":=").Qual(PkgDfuseBinary, "MarshalBorsh").Call(Id(paramName).Dot(ToCamel(fieldName))),
+									If(Id("marshalErr").Op("!=").Nil()).Block(Err().Op("=").Id("marshalErr"), Return()),
+									Id("seeds").Op("=").Append(Id("seeds"), Id(paramName+ToCamel(fieldName)+"Bytes")),
+								),
+							)
+						}
+
+					} else { // kind: arg, path: param (simple case)
+						paramName := ToLowerCamel(seedDef.Path)
+
+						var argDef *IdlField
+						// First, try to match by index (more robust approach)
+						// Count the number of arg-kind seeds we've seen so far
+						argSeedIndex := 0
+						for j := 0; j < i; j++ {
+							if account.PDA.Seeds[j].Kind == "arg" {
+								argSeedIndex++
+							}
+						}
+						// Use the arg seed index to get the corresponding instruction arg
+						if argSeedIndex < len(instruction.Args) {
+							argDef = &instruction.Args[argSeedIndex]
+						}
+						
+						// Fallback to name matching if index matching didn't work or failed
+						if argDef == nil {
+							for argIdx := range instruction.Args {
+								if instruction.Args[argIdx].Name == seedDef.Path {
+									argDef = &instruction.Args[argIdx]
+									break
+								}
+							}
+						}
+						
+						if argDef == nil {
+							panic(fmt.Sprintf("arg '%s' not found for pda seed (tried both index %d and name matching)", seedDef.Path, argSeedIndex))
+						}
+
+						seedParamTypes[paramName] = genTypeName(argDef.Type)
+						seedParamOrder = append(seedParamOrder, paramName)
+
+						seedBodyGen[i] = func(body *Group) {
+							body.Commentf("arg: %s", seedDef.Path)
+							body.Add(
+								Block(
+									Id(paramName+"Bytes").Op(",").Id("marshalErr").Op(":=").Qual(PkgDfuseBinary, "MarshalBorsh").Call(Id(paramName)),
+									If(Id("marshalErr").Op("!=").Nil()).Block(Err().Op("=").Id("marshalErr"), Return()),
+									Id("seeds").Op("=").Append(Id("seeds"), Id(paramName+"Bytes")),
+								),
+							)
+						}
 					}
 
 				} else if seedDef.Kind == "account" {
@@ -1650,9 +1721,17 @@ func genAccountGettersSetters(
 						// Find the account in the instruction's accounts list.
 						found := false
 						for _, acc := range accounts {
-							if acc.IdlAccount.Name == accountName {
-								accountTypeName := ToCamel(seedDef.Account)
+							if acc.IdlAccount != nil && acc.IdlAccount.Name == accountName {
+								// Handle optional account field - if not provided, infer from account name
+								var accountTypeName string
+								if seedDef.Account != "" {
+									accountTypeName = ToCamel(seedDef.Account)
+								} else {
+									// Default to the account name as the type
+									accountTypeName = ToCamel(accountName)
+								}
 								seedParamTypes[paramName] = Op("*").Id(accountTypeName)
+								seedParamOrder = append(seedParamOrder, paramName)
 								found = true
 								break
 							}
@@ -1665,8 +1744,8 @@ func genAccountGettersSetters(
 							body.Commentf("path: %s", seedDef.Path)
 							body.Add(
 								Block(
-									Id(paramName+fieldName+"Bytes").Op(",").Err().Op(":=").Qual(PkgDfuseBinary, "MarshalBorsh").Call(Id(paramName).Dot(ToCamel(fieldName))),
-									If(Err().Op("!=").Nil()).Block(Return()),
+									Id(paramName+fieldName+"Bytes").Op(",").Id("marshalErr").Op(":=").Qual(PkgDfuseBinary, "MarshalBorsh").Call(Id(paramName).Dot(ToCamel(fieldName))),
+									If(Id("marshalErr").Op("!=").Nil()).Block(Err().Op("=").Id("marshalErr"), Return()),
 									Id("seeds").Op("=").Append(Id("seeds"), Id(paramName+fieldName+"Bytes")),
 								),
 							)
@@ -1675,6 +1754,7 @@ func genAccountGettersSetters(
 					} else { // kind: account, path: account
 						paramName := ToLowerCamel(seedDef.Path)
 						seedParamTypes[paramName] = Qual(PkgSolanaGo, "PublicKey")
+						seedParamOrder = append(seedParamOrder, paramName)
 
 						seedBodyGen[i] = func(body *Group) {
 							body.Commentf("path: %s", seedDef.Path)
@@ -1700,8 +1780,8 @@ func genAccountGettersSetters(
 				Params(
 					ListFunc(func(params *Group) {
 						// Parameters:
-						for varName, typeName := range seedParamTypes {
-							params.Id(varName).Add(typeName)
+						for _, varName := range seedParamOrder {
+							params.Id(varName).Add(seedParamTypes[varName])
 						}
 						params.Id("knownBumpSeed").Uint8()
 					}),
@@ -1734,7 +1814,7 @@ func genAccountGettersSetters(
 
 					body.Add(
 						If(Id("knownBumpSeed").Op("!=").Lit(0)).BlockFunc(func(group *Group) {
-							group.Add(Id("seeds").Op("=").Append(Id("seeds"), Index().Byte().Values(Byte().Call(Id("bumpSeed")))))
+							group.Add(Id("seeds").Op("=").Append(Id("seeds"), Index().Byte().Values(Byte().Call(Id("knownBumpSeed")))))
 							group.Add(List(Id("pda"), Id("err")).Op("=").Add(Qual(PkgSolanaGo, "CreateProgramAddress").Call(Id("seeds"), seedProgramRef)))
 						}).
 							Else().BlockFunc(func(group *Group) {
@@ -1752,8 +1832,8 @@ func genAccountGettersSetters(
 				Params(
 					ListFunc(func(params *Group) {
 						// Parameters:
-						for varName, typeName := range seedParamTypes {
-							params.Id(varName).Add(typeName)
+						for _, varName := range seedParamOrder {
+							params.Id(varName).Add(seedParamTypes[varName])
 						}
 						params.Id("bumpSeed").Uint8()
 					}),
@@ -1767,7 +1847,7 @@ func genAccountGettersSetters(
 				).
 				BlockFunc(func(body *Group) {
 					body.Add(List(Id("pda"), Id("_"), Id("err")).Op("=").Id("inst").Dot(internalAccessorName).CallFunc(func(group *Group) {
-						for varName := range seedParamTypes {
+						for _, varName := range seedParamOrder {
 							group.Add(Id(varName))
 						}
 						group.Add(Id("bumpSeed"))
@@ -1782,8 +1862,8 @@ func genAccountGettersSetters(
 				Params(
 					ListFunc(func(params *Group) {
 						// Parameters:
-						for varName, typeName := range seedParamTypes {
-							params.Id(varName).Add(typeName)
+						for _, varName := range seedParamOrder {
+							params.Id(varName).Add(seedParamTypes[varName])
 						}
 						params.Id("bumpSeed").Uint8()
 					}),
@@ -1796,7 +1876,7 @@ func genAccountGettersSetters(
 				).
 				BlockFunc(func(body *Group) {
 					body.Add(List(Id("pda"), Id("_"), Id("err")).Op(":=").Id("inst").Dot(internalAccessorName).CallFunc(func(group *Group) {
-						for varName := range seedParamTypes {
+						for _, varName := range seedParamOrder {
 							group.Add(Id(varName))
 						}
 						group.Add(Id("bumpSeed"))
@@ -1815,8 +1895,8 @@ func genAccountGettersSetters(
 				Params(
 					ListFunc(func(params *Group) {
 						// Parameters:
-						for varName, typeName := range seedParamTypes {
-							params.Id(varName).Add(typeName)
+						for _, varName := range seedParamOrder {
+							params.Id(varName).Add(seedParamTypes[varName])
 						}
 					}),
 				).
@@ -1830,7 +1910,7 @@ func genAccountGettersSetters(
 				).
 				BlockFunc(func(body *Group) {
 					body.Add(List(Id("pda"), Id("bumpSeed"), Id("err")).Op("=").Id("inst").Dot(internalAccessorName).CallFunc(func(group *Group) {
-						for varName := range seedParamTypes {
+						for _, varName := range seedParamOrder {
 							group.Add(Id(varName))
 						}
 						group.Add(Lit(0))
@@ -1845,8 +1925,8 @@ func genAccountGettersSetters(
 				Params(
 					ListFunc(func(params *Group) {
 						// Parameters:
-						for varName, typeName := range seedParamTypes {
-							params.Id(varName).Add(typeName)
+						for _, varName := range seedParamOrder {
+							params.Id(varName).Add(seedParamTypes[varName])
 						}
 					}),
 				).
@@ -1858,7 +1938,7 @@ func genAccountGettersSetters(
 				).
 				BlockFunc(func(body *Group) {
 					body.Add(List(Id("pda"), Id("_"), Id("err")).Op(":=").Id("inst").Dot(internalAccessorName).CallFunc(func(group *Group) {
-						for varName := range seedParamTypes {
+						for _, varName := range seedParamOrder {
 							group.Add(Id(varName))
 						}
 						group.Add(Lit(0))
