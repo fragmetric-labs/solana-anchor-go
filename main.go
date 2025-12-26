@@ -341,12 +341,19 @@ func DecodeInstructions(message *ag_solanago.Message) (instructions []*Instructi
 		// Declare account layouts from IDL:
 		for _, acc := range idl.Accounts {
 			if _, ok := defs[acc.Name]; ok {
+				// New Anchor 0.30+ format: account references a type definition
 				file.Add(genTypeDef(&idl, acc.Discriminator, IdlTypeDef{
 					Name: defs[acc.Name].Name + "Account",
 					Type: defs[acc.Name].Type,
 				}))
+			} else if acc.Type.Kind != "" {
+				// Old Anchor format: account has embedded type definition
+				file.Add(genTypeDef(&idl, acc.Discriminator, IdlTypeDef{
+					Name: acc.Name,
+					Type: acc.Type,
+				}))
 			} else {
-				panic(`not implemented - only IDL from ("anchor": ">=0.30.0") is available`)
+				panic(Sf("account %s has no type definition", acc.Name))
 			}
 		}
 		files = append(files, &FileWrapper{
@@ -358,28 +365,48 @@ func DecodeInstructions(message *ag_solanago.Message) (instructions []*Instructi
 	{
 		file := NewGoFile(idl.Metadata.Name, true)
 
-		// Declare account layouts from IDL:
+		// Declare event layouts from IDL:
 		for _, evt := range idl.Events {
+			var eventDataTypeName string
 			if _, ok := defs[evt.Name]; ok {
-				eventDataTypeName := defs[evt.Name].Name + "EventData"
+				// New Anchor 0.30+ format: event references a type definition
+				eventDataTypeName = defs[evt.Name].Name + "EventData"
 				file.Add(genTypeDef(&idl, evt.Discriminator, IdlTypeDef{
 					Name: eventDataTypeName,
 					Type: defs[evt.Name].Type,
 				}))
-				file.Add(Func().Params(Op("*").Id(eventDataTypeName)).Id("isEventData").Params().Block())
-
-				file.Add(Func().Params(Id("obj").Op("*").Id(eventDataTypeName)).Id("Self").Params().
-					Params(
-						ListFunc(func(results *Group) {
-							// Results:
-							results.Any()
-						}),
-					).BlockFunc(func(body *Group) {
-					body.Return(Id("obj"))
+			} else if len(evt.Fields) > 0 {
+				// Old Anchor format: event has embedded fields
+				eventDataTypeName = evt.Name + "EventData"
+				// Convert event fields to struct fields
+				structFields := make(IdlStructFieldSlice, len(evt.Fields))
+				for i, f := range evt.Fields {
+					structFields[i] = IdlField{
+						Name: f.Name,
+						Type: f.Type,
+					}
+				}
+				file.Add(genTypeDef(&idl, evt.Discriminator, IdlTypeDef{
+					Name: eventDataTypeName,
+					Type: IdlTypeDefTy{
+						Kind:   IdlTypeDefTyKindStruct,
+						Fields: &structFields,
+					},
 				}))
 			} else {
-				panic(`not implemented - only IDL from ("anchor": ">=0.30.0") is available`)
+				continue // Skip events without type definitions
 			}
+			file.Add(Func().Params(Op("*").Id(eventDataTypeName)).Id("isEventData").Params().Block())
+
+			file.Add(Func().Params(Id("obj").Op("*").Id(eventDataTypeName)).Id("Self").Params().
+				Params(
+					ListFunc(func(results *Group) {
+						// Results:
+						results.Any()
+					}),
+				).BlockFunc(func(body *Group) {
+				body.Return(Id("obj"))
+			}))
 		}
 
 		file.Add(Empty().Var().Id("eventTypes").Op("=").Map(Index(Lit(8)).Byte()).Qual("reflect", "Type").Values(DictFunc(func(d Dict) {
