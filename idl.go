@@ -56,8 +56,15 @@ func (idl *IDL) Validate() error {
 }
 
 type IdlEvent struct {
-	Name          string   `json:"name"`
-	Discriminator *[8]byte `json:"discriminator,omitempty"`
+	Name          string          `json:"name"`
+	Discriminator *[8]byte        `json:"discriminator,omitempty"`
+	Fields        []IdlEventField `json:"fields,omitempty"` // Old Anchor format
+}
+
+type IdlEventField struct {
+	Name  string  `json:"name"`
+	Type  IdlType `json:"type"`
+	Index bool    `json:"index"`
 }
 
 type IdlInstruction struct {
@@ -205,9 +212,9 @@ type idlAccountPDA struct {
 }
 
 type idlAccountPDASeed struct {
-	Kind  string `json:"kind"`  // const or account
-	Value []byte `json:"value"` // const
-	Path  string `json:"path,omitempty"`
+	Kind    string `json:"kind"`  // const or account
+	Value   []byte `json:"value"` // const
+	Path    string `json:"path,omitempty"`
 	Account string `json:"account,omitempty"`
 }
 
@@ -227,22 +234,23 @@ type IdlField struct {
 type IdlTypeAsString string
 
 const (
-	IdlTypeBool   IdlTypeAsString = "bool"
-	IdlTypeU8     IdlTypeAsString = "u8"
-	IdlTypeI8     IdlTypeAsString = "i8"
-	IdlTypeU16    IdlTypeAsString = "u16"
-	IdlTypeI16    IdlTypeAsString = "i16"
-	IdlTypeU32    IdlTypeAsString = "u32"
-	IdlTypeI32    IdlTypeAsString = "i32"
-	IdlTypeU64    IdlTypeAsString = "u64"
-	IdlTypeI64    IdlTypeAsString = "i64"
-	IdlTypeU128   IdlTypeAsString = "u128"
-	IdlTypeI128   IdlTypeAsString = "i128"
-	IdlTypeBytes  IdlTypeAsString = "bytes"
-	IdlTypeString IdlTypeAsString = "string"
-	IdlTypePubkey IdlTypeAsString = "pubkey"
-	IdlTypeF32    IdlTypeAsString = "f32"
-	IdlTypeF64    IdlTypeAsString = "f64"
+	IdlTypeBool      IdlTypeAsString = "bool"
+	IdlTypeU8        IdlTypeAsString = "u8"
+	IdlTypeI8        IdlTypeAsString = "i8"
+	IdlTypeU16       IdlTypeAsString = "u16"
+	IdlTypeI16       IdlTypeAsString = "i16"
+	IdlTypeU32       IdlTypeAsString = "u32"
+	IdlTypeI32       IdlTypeAsString = "i32"
+	IdlTypeU64       IdlTypeAsString = "u64"
+	IdlTypeI64       IdlTypeAsString = "i64"
+	IdlTypeU128      IdlTypeAsString = "u128"
+	IdlTypeI128      IdlTypeAsString = "i128"
+	IdlTypeBytes     IdlTypeAsString = "bytes"
+	IdlTypeString    IdlTypeAsString = "string"
+	IdlTypePubkey    IdlTypeAsString = "pubkey"
+	IdlTypePublicKey IdlTypeAsString = "publicKey"
+	IdlTypeF32       IdlTypeAsString = "f32"
+	IdlTypeF64       IdlTypeAsString = "f64"
 
 	// Custom additions:
 	IdlTypeUnixTimestamp IdlTypeAsString = "unixTimestamp"
