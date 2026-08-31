@@ -9,11 +9,10 @@ import (
 )
 
 const (
-	PkgSolanaGo       = "github.com/gagliardetto/solana-go"
-	PkgSolanaGoText   = "github.com/gagliardetto/solana-go/text"
+	PkgSolanaGo       = "github.com/fluxrpc/solana-go"
+	PkgRpc            = "github.com/fluxrpc/solana-go/rpc"
 	PkgDfuseBinary    = "github.com/gagliardetto/binary"
 	PkgTreeout        = "github.com/gagliardetto/treeout"
-	PkgFormat         = "github.com/gagliardetto/solana-go/text/format"
 	PkgGoFuzz         = "github.com/gagliardetto/gofuzz"
 	PkgTestifyRequire = "github.com/stretchr/testify/require"
 )
